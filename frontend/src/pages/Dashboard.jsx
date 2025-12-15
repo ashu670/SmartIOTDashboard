@@ -69,7 +69,22 @@ export default function Dashboard() {
       setDevices([...devices, res.data.device]);
       setNewDevice({ name: '', type: 'AC/Heater', location: '' });
     } catch (err) {
-      alert(err.response?.data?.message || 'Error adding device');
+      console.error('Error adding device:', err);
+      const errorData = err.response?.data;
+      let errorMessage = errorData?.message || errorData?.error || err.message || 'Error adding device';
+      
+      // If there's an existing device, show its details
+      if (errorData?.existingDevice) {
+        const existing = errorData.existingDevice;
+        errorMessage += `\n\nExisting Device Details:\n` +
+          `Name: ${existing.name}\n` +
+          `Type: ${existing.type}\n` +
+          `Location: ${existing.location}\n` +
+          `Status: ${existing.status}\n` +
+          `\nThis device already exists in your house. Please use a different name.`;
+      }
+      
+      alert(`Failed to add device:\n${errorMessage}`);
     }
   };
 
