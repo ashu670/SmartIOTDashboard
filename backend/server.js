@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const familyRoutes = require('./routes/familyRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +28,7 @@ app.set('io', io);
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/family', familyRoutes);
 
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);

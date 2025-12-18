@@ -6,16 +6,25 @@ const deviceSchema = new mongoose.Schema({
   type: { type: String, enum: ['AC/Heater', 'Lights', 'Fan'], required: true },
   location: { type: String, default: 'Unknown' },
   status: { type: String, enum: ['on', 'off'], default: 'off' },
-  value: { type: Number, default: 0 }, // For AC/Heater temperature
+
+  // Device Specific Fields
+  temperature: { type: Number, min: 16, max: 30, default: null },
+  brightness: { type: Number, min: 1, max: 10, default: null },
+  color: { type: String, default: null },
+  speed: { type: Number, min: 1, max: 5, default: null },
+
+  // Legacy field (deprecated)
+  value: { type: Number, default: 0 },
+
   houseName: { type: String, required: true },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  approved: { type: Boolean, default: true }, // Admin adds devices, so auto-approved
+  approved: { type: Boolean, default: true },
   lastUpdated: { type: Date, default: Date.now },
   lastToggledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   activityLog: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     userName: { type: String },
-    action: { type: String }, // 'turned on', 'turned off', 'temperature set to X'
+    action: { type: String },
     timestamp: { type: Date, default: Date.now }
   }]
 }, { timestamps: true });

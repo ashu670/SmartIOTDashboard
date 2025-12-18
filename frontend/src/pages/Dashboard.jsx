@@ -6,50 +6,94 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, loading, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [devices, setDevices] = useState([]);
-  const [filterType, setFilterType] = useState('');
-  const [socket, setSocket] = useState(null);
-  const [newDevice, setNewDevice] = useState({ name: '', type: 'AC/Heater', location: '' });
 
+  const [devices, setDevices] = useState([]);
+  const [rooms, setRooms] = useState([]); // Managed rooms list (persists even if no devices)
+  const [filterType, setFilterType] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState(null); // null = no room selected
+  const [socket, setSocket] = useState(null);
+  const [newDevice, setNewDevice] = useState({
+    name: '',
+    type: 'AC/Heater'
+  });
+  const [isAddingRoom, setIsAddingRoom] = useState(false);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [isAddingDevice, setIsAddingDevice] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [activeTab, setActiveTab] = useState('info');
+
+  /* -------------------- AUTH + SOCKET -------------------- */
   useEffect(() => {
+    if (loading) return;
+
     if (!user) {
       navigate('/login');
       return;
     }
 
-    const s = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
-    setSocket(s);
-    s.on('deviceUpdated', (d) => {
-      setDevices(prev => prev.map(p => {
-        if (p._id === d._id) {
-          // Merge the updated device data, ensuring all fields are included
-          return { ...p, ...d, status: d.status, lastToggledBy: d.lastToggledBy };
-        }
-        return p;
-      }));
-    });
-    s.on('deviceApproved', (d) => {
-      setDevices(prev => prev.map(p => {
-        if (p._id === d._id) {
-          return { ...p, ...d };
-        }
-        return p;
-      }));
-    });
-    return () => s.disconnect();
-  }, [user, navigate]);
+    const baseURL =
+      import.meta.env.VITE_API_URL?.replace('/api', '') ||
+      'http://localhost:5000';
 
-  useEffect(() => { 
-    if (user) fetchDevices(); 
+    const s = io(baseURL);
+    setSocket(s);
+
+    s.on('deviceUpdated', (updated) => {
+      // Replace entire device object – socket payload is source of truth
+      setDevices((prev) =>
+        prev.map((d) => (d._id === updated._id ? updated : d))
+      );
+    });
+
+    s.on('deviceApproved', (approved) => {
+      setDevices((prev) =>
+        prev.map((d) => (d._id === approved._id ? approved : d))
+      );
+    });
+
+    return () => s.disconnect();
+  }, [user, loading, navigate]);
+
+  /* -------------------- FETCH DEVICES -------------------- */
+  useEffect(() => {
+    if (user) {
+      fetchDevices();
+      fetchFamilyMembers();
+    }
   }, [user]);
+
+  const fetchFamilyMembers = async () => {
+    try {
+      const res = await api.get('/family/members');
+      // Backend response should already include all members in the house
+      setFamilyMembers(res.data.members || []);
+    } catch (err) {
+      console.error('Error fetching family members:', err);
+      if (err.response?.status === 401) {
+        logout();
+        navigate('/login');
+      }
+    }
+  };
 
   const fetchDevices = async () => {
     try {
       const res = await api.get('/devices');
-      setDevices(res.data.devices);
-    } catch (err) { 
+      const fetchedDevices = res.data.devices;
+      setDevices(fetchedDevices);
+
+      // Merge device locations into rooms list (add any new ones)
+      const locationsFromDevices = fetchedDevices
+        .map((d) => d.location)
+        .filter(Boolean);
+      setRooms((prev) => {
+        const combined = new Set([...prev, ...locationsFromDevices]);
+        return Array.from(combined);
+      });
+    } catch (err) {
       console.error(err);
       if (err.response?.status === 401) {
         logout();
@@ -58,119 +102,620 @@ export default function Dashboard() {
     }
   };
 
+  /* -------------------- AUTO-SELECT FIRST ROOM -------------------- */
+  useEffect(() => {
+    // Auto-select first room if available and none selected
+    if (rooms.length > 0 && selectedRoom === null) {
+      setSelectedRoom(rooms[0]);
+    }
+  }, [rooms, selectedRoom]);
+
+  /* -------------------- ROOM HELPERS -------------------- */
+  const handleAddRoomClick = () => {
+    if (user?.role !== 'admin') return;
+    setIsAddingRoom(true);
+    setNewRoomName('');
+  };
+
+  const handleConfirmAddRoom = () => {
+    const trimmed = newRoomName.trim();
+    if (!trimmed) {
+      setIsAddingRoom(false);
+      return;
+    }
+
+    if (rooms.includes(trimmed)) {
+      // Room exists - just close the input
+      setIsAddingRoom(false);
+      setNewRoomName('');
+      return;
+    }
+
+    // Add room and auto-select it
+    setRooms((prev) => [...prev, trimmed]);
+    setSelectedRoom(trimmed);
+    setIsAddingRoom(false);
+    setNewRoomName('');
+  };
+
+  const handleCancelAddRoom = () => {
+    setIsAddingRoom(false);
+    setNewRoomName('');
+  };
+
+  /* -------------------- DEVICE HELPERS -------------------- */
   const onUpdateDevice = (updated) => {
-    setDevices(prev => prev.map(d => d._id === updated._id ? updated : d));
+    setDevices((prev) =>
+      prev.map((d) => (d._id === updated._id ? updated : d))
+    );
+  };
+
+  const handleAddDeviceClick = () => {
+    if (user?.role !== 'admin' || !selectedRoom) return;
+    setIsAddingDevice(true);
+    setNewDevice({ name: '', type: 'AC/Heater' });
+  };
+
+  const handleCancelAddDevice = () => {
+    setIsAddingDevice(false);
+    setNewDevice({ name: '', type: 'AC/Heater' });
   };
 
   const addDevice = async (e) => {
     e.preventDefault();
+
+    // Safety guard: only admin can add devices
+    if (user?.role !== 'admin') {
+      alert('Only admin can add devices');
+      return;
+    }
+
+    // Must have a specific room selected
+    if (!selectedRoom) {
+      alert('Please select a room to add a device');
+      return;
+    }
+
     try {
-      const res = await api.post('/devices', newDevice);
-      setDevices([...devices, res.data.device]);
-      setNewDevice({ name: '', type: 'AC/Heater', location: '' });
+      const payload = {
+        name: newDevice.name,
+        type: newDevice.type,
+        location: selectedRoom // Use selected room as location
+      };
+      const res = await api.post('/devices', payload);
+      setDevices((prev) => [...prev, res.data.device]);
+      setNewDevice({ name: '', type: 'AC/Heater' });
+      setIsAddingDevice(false); // Collapse form after successful add
     } catch (err) {
-      console.error('Error adding device:', err);
-      const errorData = err.response?.data;
-      let errorMessage = errorData?.message || errorData?.error || err.message || 'Error adding device';
-      
-      // If there's an existing device, show its details
-      if (errorData?.existingDevice) {
-        const existing = errorData.existingDevice;
-        errorMessage += `\n\nExisting Device Details:\n` +
-          `Name: ${existing.name}\n` +
-          `Type: ${existing.type}\n` +
-          `Location: ${existing.location}\n` +
-          `Status: ${existing.status}\n` +
-          `\nThis device already exists in your house. Please use a different name.`;
+      const data = err.response?.data;
+      let msg = data?.message || data?.error || 'Error adding device';
+
+      if (data?.existingDevice) {
+        const d = data.existingDevice;
+        msg += `\n\nExisting Device:\n${d.name} (${d.type}) - ${d.location}`;
       }
-      
-      alert(`Failed to add device:\n${errorMessage}`);
+
+      alert(msg);
     }
   };
 
-  const filtered = devices.filter(d => (filterType ? d.type === filterType : true));
+  /* -------------------- DERIVED DATA -------------------- */
+  // Combined filter: room + type + search query
+  const filteredDevices = devices.filter((d) => {
+    const roomMatch = selectedRoom ? d.location === selectedRoom : false;
+    const typeMatch = filterType ? d.type === filterType : true;
+    const searchMatch = searchQuery ? d.name.toLowerCase().includes(searchQuery.toLowerCase()) : true;
+    return roomMatch && typeMatch && searchMatch;
+  });
 
+  // Running devices count (respects room filter only, for subtitle)
+  const runningDevicesCount = selectedRoom
+    ? devices.filter((d) => d.location === selectedRoom && d.status === 'on').length
+    : 0;
+
+  // Aggregate activity logs from all devices
+  const activityLogs = devices
+    .flatMap((device) => {
+      if (!device.activityLog || device.activityLog.length === 0) return [];
+      return device.activityLog.map((log) => ({
+        ...log,
+        deviceName: device.name,
+        deviceLocation: device.location
+      }));
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 20); // Show latest 20 logs
+
+  // Calculate most used devices (based on activity log frequency)
+  const deviceUsageCount = devices.reduce((acc, device) => {
+    const count = device.activityLog?.length || 0;
+    acc[device._id] = {
+      device,
+      count,
+      lastUsed: device.activityLog && device.activityLog.length > 0
+        ? new Date(Math.max(...device.activityLog.map(l => new Date(l.timestamp))))
+        : null
+    };
+    return acc;
+  }, {});
+
+  const mostUsedDevices = Object.values(deviceUsageCount)
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      if (a.lastUsed && b.lastUsed) return b.lastUsed - a.lastUsed;
+      return 0;
+    })
+    .slice(0, 4)
+    .map(item => item.device);
+
+  // Placeholder date/time
+  const now = new Date();
+  const formattedDate = now.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+  const formattedTime = now.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  /* -------------------- RENDER GUARDS -------------------- */
+  if (loading) return null;
   if (!user) return null;
 
+  /* -------------------- UI -------------------- */
   return (
-    <div className="p-4 min-h-screen bg-gray-100">
-      {/* Welcome Section with Profile Picture */}
-      <div className="bg-white p-6 rounded-lg shadow mb-4 flex items-center gap-4">
-        {user.photo ? (
-          <img 
-            src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${user.photo}`} 
-            alt={user.name}
-            className="w-20 h-20 rounded-full object-cover border-4 border-purple-600"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 border-4 border-purple-600 text-3xl font-bold">
-            {user.name.charAt(0).toUpperCase()}
+    <div className="h-screen bg-slate-950 text-white flex overflow-hidden">
+      {/* ========== LEFT SIDEBAR ========== */}
+      <aside className="w-64 shrink-0 flex flex-col gap-4 p-4 border-r border-slate-800 bg-slate-900/60 overflow-y-auto">
+        {/* --- Profile Section --- */}
+        <div className="bg-slate-800/70 rounded-2xl p-4 flex items-center gap-3">
+          {user.photo ? (
+            <img
+              src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${user.photo}`}
+              alt={user.name}
+              className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-xl font-semibold border-2 border-indigo-500">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1 overflow-hidden">
+            <p className="text-sm font-semibold truncate">{user.name}</p>
+            <p className="text-xs text-slate-400">
+              {user.role === 'admin' ? 'Family Head (Admin)' : 'Family Member'}
+            </p>
           </div>
-        )}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Welcome, {user.name}! 👋</h2>
-          <p className="text-gray-600 mt-1">
-            {user.role === 'admin' ? 'Manage your house devices' : 'Control your house devices'}
-            {user.houseName && <span className="ml-2">| House: {user.houseName}</span>}
-          </p>
         </div>
-      </div>
-      
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-gray-600">
-            Role: <span className={`font-semibold ${user.role === 'admin' ? 'text-purple-600' : 'text-blue-600'}`}>
-              {user.role === 'admin' ? '👑 Family Head (Admin)' : '👤 Family Member'}
-            </span>
-          </p>
-        </div>
-        <div>
-          {user.role === 'admin' && (
-            <button onClick={() => navigate('/admin')} className="mr-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700">
-              👑 Admin Panel
+
+        {/* --- Rooms List --- */}
+        <div className="bg-slate-800/50 rounded-2xl p-3 flex flex-col" style={{ maxHeight: '300px' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-slate-400 uppercase tracking-wide">Rooms</p>
+          </div>
+
+          {/* Inline Add Room UI */}
+          {isAddingRoom && (
+            <div className="mb-2 p-2 bg-slate-900/50 rounded-lg flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Room name"
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmAddRoom();
+                  if (e.key === 'Escape') handleCancelAddRoom();
+                }}
+                autoFocus
+                className="flex-1 px-2 py-1 rounded border border-slate-600 bg-slate-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                onClick={handleConfirmAddRoom}
+                className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm"
+                title="Confirm"
+              >
+                ✔
+              </button>
+              <button
+                onClick={handleCancelAddRoom}
+                className="px-2 py-1 rounded bg-red-600/80 hover:bg-red-500 text-white text-sm"
+                title="Cancel"
+              >
+                ✖
+              </button>
+            </div>
+          )}
+
+          {/* Room Buttons List */}
+          <div className="flex-1 overflow-y-auto space-y-1">
+            {rooms.length === 0 && !isAddingRoom ? (
+              <p className="text-xs text-slate-500 text-center py-4">
+                No rooms yet
+              </p>
+            ) : (
+              rooms.map((room) => (
+                <button
+                  key={room}
+                  onClick={() => setSelectedRoom(room)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition ${selectedRoom === room
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700/50 hover:bg-slate-700 text-slate-200'
+                    }`}
+                >
+                  {room}
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Add New Room Card */}
+          {user.role === 'admin' && !isAddingRoom && (
+            <button
+              onClick={handleAddRoomClick}
+              className="mt-4 mx-auto w-[100%] p-2 rounded-xl border-2 border-dashed border-slate-600 hover:border-indigo-500 bg-slate-900/30 hover:bg-slate-900/50 transition flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-indigo-400"
+            >
+              <span className="text-base">+</span>
+              <span className="text-[12px]">Add New Room</span>
             </button>
           )}
-          <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Logout</button>
         </div>
-      </div>
 
-      {user.role === 'admin' && (
-        <div className="bg-white p-4 rounded shadow mb-4">
-          <h2 className="text-xl font-semibold mb-2">Add New Device</h2>
-          <form onSubmit={addDevice} className="flex gap-2">
-            <input value={newDevice.name} onChange={e => setNewDevice({...newDevice, name: e.target.value})} placeholder="Device Name" className="p-2 border rounded" required />
-            <select value={newDevice.type} onChange={e => setNewDevice({...newDevice, type: e.target.value})} className="p-2 border rounded">
-              <option value="AC/Heater">AC/Heater</option>
-              <option value="Lights">Lights</option>
-              <option value="Fan">Fan</option>
-            </select>
-            <input value={newDevice.location} onChange={e => setNewDevice({...newDevice, location: e.target.value})} placeholder="Location" className="p-2 border rounded" required />
-            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add Device</button>
-          </form>
+        {/* --- Activity Logs Section --- */}
+        <div className="bg-slate-800/50 rounded-2xl p-3 flex flex-col" style={{ maxHeight: '250px' }}>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Activity Logs</p>
+          <div className="overflow-y-auto space-y-2 flex-1">
+            {activityLogs.length === 0 ? (
+              <p className="text-xs text-slate-500 text-center py-4">No activity logs yet</p>
+            ) : (
+              activityLogs.map((log, idx) => (
+                <div key={idx} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg">
+                  <p className="truncate">
+                    <span className="font-semibold">{log.deviceLocation} {log.deviceName}</span> {log.action} by {log.userName || 'Unknown'}
+                  </p>
+                  <p className="text-slate-500 text-[10px] mt-1">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      )}
 
-      <div className="my-3">
-        <label>Filter by Type: </label>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="ml-2 p-1 border rounded">
-          <option value="">All</option>
-          <option value="AC/Heater">AC/Heater</option>
-          <option value="Lights">Lights</option>
-          <option value="Fan">Fan</option>
-        </select>
-      </div>
+        {/* --- Logout --- */}
+        <button
+          onClick={() => {
+            logout();
+            navigate('/login');
+          }}
+          className="px-4 py-2 rounded-xl bg-red-600/80 hover:bg-red-500 text-sm font-medium"
+        >
+          Logout
+        </button>
+      </aside>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.length === 0 ? (
-          <p className="col-span-full text-center text-gray-500">No devices found. Add a device to get started!</p>
-        ) : (
-          filtered.map(d => (
-            <DeviceCard key={d._id} device={d} onUpdate={onUpdateDevice} />
-          ))
-        )}
-      </div>
+      {/* ========== CENTER SECTION — MY WORKSTATION ========== */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <section className="flex-1 p-6 overflow-y-auto flex flex-col gap-4">
+          {/* Global Header Row */}
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-xl font-bold text-white">
+                Welcome back, {user.name} 👋
+              </h2>
+            </div>
+
+            {/* Search Input */}
+            <input
+              type="text"
+              placeholder="Search with device name"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-64"
+            />
+          </div>
+
+          {/* My Workstation Header */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold">
+                My Workstation{selectedRoom && <span className="text-indigo-400"> – {selectedRoom}</span>}
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                {selectedRoom ? (
+                  <>
+                    {runningDevicesCount} device{runningDevicesCount !== 1 && 's'} running in {selectedRoom}
+                  </>
+                ) : (
+                  'Select a room to view devices'
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Add Device Button removed from here */}
+            </div>
+          </div>
+
+          {/* Filter Row & Add Device */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-400">Filter by type:</span>
+              <select
+                className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="AC/Heater">AC/Heater</option>
+                <option value="Lights">Lights</option>
+                <option value="Fan">Fan</option>
+              </select>
+            </div>
+
+            {/* Add Device Button (moved here) */}
+            {user.role === 'admin' && (
+              <button
+                onClick={handleAddDeviceClick}
+                disabled={!selectedRoom}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${selectedRoom
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  }`}
+                title={selectedRoom ? 'Add new device' : 'Select a room first'}
+              >
+                + Add Device
+              </button>
+            )}
+          </div>
+
+          {/* Inline Add Device Form */}
+          {isAddingDevice && (
+            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-4">
+              <form onSubmit={addDevice} className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input
+                    required
+                    placeholder="Device name"
+                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    value={newDevice.name}
+                    onChange={(e) =>
+                      setNewDevice({ ...newDevice, name: e.target.value })
+                    }
+                    autoFocus
+                  />
+                  <select
+                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    value={newDevice.type}
+                    onChange={(e) =>
+                      setNewDevice({ ...newDevice, type: e.target.value })
+                    }
+                  >
+                    <option>AC/Heater</option>
+                    <option>Lights</option>
+                    <option>Fan</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCancelAddDevice}
+                    className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-medium"
+                  >
+                    Add Device
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Devices Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {!selectedRoom ? (
+              <p className="col-span-full text-center text-slate-500">
+                Select a room to view devices
+              </p>
+            ) : filteredDevices.length === 0 ? (
+              <p className="col-span-full text-center text-slate-500">
+                No devices in this room
+              </p>
+            ) : (
+              filteredDevices.map((d) => (
+                <DeviceCard key={d._id} device={d} onUpdate={onUpdateDevice} />
+              ))
+            )}
+          </div>
+
+          {/* Bottom Split Section: Most Used + Ambience */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+            {/* Left: Most Used */}
+            <div className="bg-slate-800/70 rounded-2xl p-4">
+              <h3 className="text-lg font-semibold mb-3">Most Used</h3>
+              <div className="space-y-2">
+                {mostUsedDevices.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">No usage data yet</p>
+                ) : (
+                  mostUsedDevices.map((device) => {
+                    const usage = deviceUsageCount[device._id];
+                    const lastUsed = usage?.lastUsed;
+                    return (
+                      <div key={device._id} className="flex items-center gap-3 p-2 bg-slate-900/50 rounded-lg">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center">
+                          <span className="text-xl">
+                            {device.type === 'AC/Heater' ? '❄️' : device.type === 'Lights' ? '💡' : '🌀'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{device.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {lastUsed
+                              ? `Last used ${new Date(lastUsed).toLocaleDateString()}`
+                              : 'Never used'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Right: Ambience */}
+            <div className="bg-slate-800/70 rounded-2xl p-4">
+              <h3 className="text-lg font-semibold mb-3">Ambience</h3>
+              <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-xl p-4 flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🎵</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">Song Name</p>
+                  <p className="text-xs text-slate-400 truncate">Artist Name</p>
+                </div>
+                <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">▶️</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ========== RIGHT PANEL — INFO / AUTOMATION / FAMILY ========== */}
+      <aside className="w-80 shrink-0 border-l border-slate-800 bg-slate-900/60 flex flex-col">
+        {/* Tabs */}
+        <div className="flex border-b border-slate-800">
+          <button
+            onClick={() => setActiveTab('info')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'info'
+              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
+              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              }`}
+          >
+            Info
+          </button>
+          <button
+            onClick={() => setActiveTab('theme')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'theme'
+              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
+              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              }`}
+          >
+            Theme
+          </button>
+          <button
+            onClick={() => setActiveTab('family')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'family'
+              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
+              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              }`}
+          >
+            Family
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeTab === 'info' && (
+            <div className="space-y-4">
+              {/* Indoor Temperature */}
+              <div className="bg-slate-800/70 rounded-2xl p-6">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Indoor Temperature</p>
+                <p className="text-5xl font-bold">24°C</p>
+                <p className="text-sm text-slate-400 mt-2">{formattedDate}</p>
+              </div>
+
+              {/* Mood Setup */}
+              <div className="bg-slate-800/70 rounded-2xl p-4">
+                <p className="text-sm font-semibold mb-3">Mood Setup</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Calm', 'Good Night', 'Chill', 'Relax'].map((mood) => (
+                    <button
+                      key={mood}
+                      className="px-4 py-2 rounded-lg bg-slate-900/50 hover:bg-indigo-600/20 border border-slate-700 hover:border-indigo-500 text-sm transition"
+                    >
+                      {mood}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Electricity Consumption */}
+              <div className="bg-slate-800/70 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold">Electricity Consumption</p>
+                  <div className="flex gap-1">
+                    {['24h', '7d', '30d'].map((period) => (
+                      <button
+                        key={period}
+                        className="px-2 py-1 text-xs rounded bg-slate-900/50 hover:bg-slate-900 text-slate-400 hover:text-white transition"
+                      >
+                        {period}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-48 rounded-lg bg-slate-900/50 border border-dashed border-slate-700 flex items-center justify-center">
+                  <p className="text-xs text-slate-500">Graph placeholder</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'theme' && (
+            <div className="space-y-4">
+              <div className="bg-slate-800/70 rounded-2xl p-6 text-center">
+                <p className="text-slate-400">Theme customization coming soon</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'family' && (
+            <div className="space-y-3">
+              {familyMembers.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8">No family members found</p>
+              ) : (
+                <>
+                  {familyMembers.map((member) => (
+                    <div key={member._id || member.email} className="bg-slate-800/70 rounded-xl p-3 flex items-center gap-3">
+                      {member.photo ? (
+                        <img
+                          src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${member.photo}`}
+                          alt={member.name}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-slate-700"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-lg font-semibold">
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{member.name}</p>
+                        <p className="text-xs text-slate-400">
+                          {member.role === 'admin' ? 'Family Head' : 'Family Member'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {user.role === 'admin' && (
+                    <button
+                      onClick={() => navigate('/manage-members')}
+                      className="w-full mt-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white transition text-center"
+                    >
+                      Manage Members
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }
-
