@@ -8,8 +8,8 @@ const deviceSchema = new mongoose.Schema({
   status: { type: String, enum: ['on', 'off'], default: 'off' },
 
   // Device Specific Fields
-  temperature: { type: Number, min: 16, max: 30, default: null },
-  brightness: { type: Number, min: 1, max: 10, default: null },
+  temperature: { type: Number, min: 16, max: 32, default: null },
+  brightness: { type: Number, min: 0, max: 100, default: null }, // Fixed max to 100
   color: { type: String, default: null },
   speed: { type: Number, min: 1, max: 5, default: null },
 

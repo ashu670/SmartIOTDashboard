@@ -376,3 +376,30 @@ exports.updateSpeed = async (req, res) => {
     res.json({ device });
   } catch (err) { res.status(500).json({ message: 'Server error', error: err.message }); }
 };
+
+exports.deleteDevice = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can delete devices' });
+    }
+
+    const device = await Device.findById(req.params.id);
+    if (!device) return res.status(404).json({ message: 'Device not found' });
+
+    // Authorization check
+    if (device.houseName !== req.user.houseName) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    await Device.findByIdAndDelete(req.params.id);
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) io.emit('deviceRemoved', { deviceId: req.params.id });
+
+    res.json({ message: 'Device removed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

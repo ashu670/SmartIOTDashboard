@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useContext } from 'react';
 import api from '../services/api';
 import DeviceCard from '../components/DeviceCard';
+import RoomItem from '../components/RoomItem';
+import ElectricityConsumption from '../components/ElectricityConsumption';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +15,8 @@ export default function Dashboard() {
   const [rooms, setRooms] = useState([]); // Managed rooms list (persists even if no devices)
   const [filterType, setFilterType] = useState('');
   const [selectedRoom, setSelectedRoom] = useState(null); // null = no room selected
+  const [energyRange, setEnergyRange] = useState("24h");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [socket, setSocket] = useState(null);
   const [newDevice, setNewDevice] = useState({
     name: '',
@@ -54,16 +58,50 @@ export default function Dashboard() {
       );
     });
 
+    s.on('deviceAdded', (newDevice) => {
+      setDevices((prev) => [...prev, newDevice]);
+    });
+
+
+    s.on('deviceRemoved', ({ deviceId }) => {
+      setDevices((prev) => prev.filter((d) => d._id !== deviceId));
+    });
+
+    s.on('roomRemoved', ({ roomId }) => {
+      setRooms((prev) => prev.filter(r => r._id !== roomId));
+      // If selected room was deleted, reset selection
+      setSelectedRoom((prev) => (prev && prev._id === roomId ? null : prev));
+    });
+
+    s.on('roomMoodApplied', ({ devices: updatedDevices }) => {
+      setDevices((prev) =>
+        prev.map((d) => {
+          const updated = updatedDevices.find((u) => u._id === d._id);
+          return updated || d;
+        })
+      );
+    });
+
     return () => s.disconnect();
   }, [user, loading, navigate]);
 
   /* -------------------- FETCH DEVICES -------------------- */
   useEffect(() => {
     if (user) {
+      fetchRooms();
       fetchDevices();
       fetchFamilyMembers();
     }
   }, [user]);
+
+  const fetchRooms = async () => {
+    try {
+      const res = await api.get('/rooms');
+      setRooms(res.data.rooms);
+    } catch (err) {
+      console.error('Error fetching rooms:', err);
+    }
+  };
 
   const fetchFamilyMembers = async () => {
     try {
@@ -85,14 +123,10 @@ export default function Dashboard() {
       const fetchedDevices = res.data.devices;
       setDevices(fetchedDevices);
 
-      // Merge device locations into rooms list (add any new ones)
-      const locationsFromDevices = fetchedDevices
-        .map((d) => d.location)
-        .filter(Boolean);
-      setRooms((prev) => {
-        const combined = new Set([...prev, ...locationsFromDevices]);
-        return Array.from(combined);
-      });
+      setDevices(fetchedDevices);
+
+      // NO LONGER DERIVING ROOMS FROM DEVICES
+      // Rooms are fetched separately from /rooms
     } catch (err) {
       console.error(err);
       if (err.response?.status === 401) {
@@ -117,30 +151,48 @@ export default function Dashboard() {
     setNewRoomName('');
   };
 
-  const handleConfirmAddRoom = () => {
+  const handleConfirmAddRoom = async () => {
     const trimmed = newRoomName.trim();
     if (!trimmed) {
       setIsAddingRoom(false);
       return;
     }
 
-    if (rooms.includes(trimmed)) {
-      // Room exists - just close the input
+    try {
+      const res = await api.post('/rooms', { name: trimmed });
+      setRooms(prev => [...prev, res.data.room]);
+      setSelectedRoom(res.data.room);
       setIsAddingRoom(false);
       setNewRoomName('');
-      return;
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to create room');
+      setIsAddingRoom(false);
     }
-
-    // Add room and auto-select it
-    setRooms((prev) => [...prev, trimmed]);
-    setSelectedRoom(trimmed);
-    setIsAddingRoom(false);
-    setNewRoomName('');
   };
 
   const handleCancelAddRoom = () => {
     setIsAddingRoom(false);
     setNewRoomName('');
+  };
+
+  const addDevice = async (e) => {
+    e.preventDefault();
+    if (!selectedRoom) return;
+
+    try {
+      await api.post('/devices', {
+        ...newDevice,
+        roomId: selectedRoom._id,
+        location: selectedRoom.name
+      });
+      // Socket will handle the update
+      setIsAddingDevice(false);
+      setNewDevice({ name: '', type: 'AC/Heater' });
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to add device');
+    }
   };
 
   /* -------------------- DEVICE HELPERS -------------------- */
@@ -161,48 +213,49 @@ export default function Dashboard() {
     setNewDevice({ name: '', type: 'AC/Heater' });
   };
 
-  const addDevice = async (e) => {
-    e.preventDefault();
+  const handleApplyMood = async (moodDisplay) => {
+    if (!selectedRoom) return;
 
-    // Safety guard: only admin can add devices
-    if (user?.role !== 'admin') {
-      alert('Only admin can add devices');
-      return;
-    }
+    // Map display name to backend key
+    const moodMap = {
+      'Calm': 'calm',
+      'Good Night': 'goodNight',
+      'Chill': 'chill',
+      'Relax': 'relax'
+    };
 
-    // Must have a specific room selected
-    if (!selectedRoom) {
-      alert('Please select a room to add a device');
-      return;
-    }
+    const moodKey = moodMap[moodDisplay];
+    if (!moodKey) return;
 
     try {
-      const payload = {
-        name: newDevice.name,
-        type: newDevice.type,
-        location: selectedRoom // Use selected room as location
-      };
-      const res = await api.post('/devices', payload);
-      setDevices((prev) => [...prev, res.data.device]);
-      setNewDevice({ name: '', type: 'AC/Heater' });
-      setIsAddingDevice(false); // Collapse form after successful add
+      await api.post(`/rooms/${selectedRoom._id}/apply-mood`, { mood: moodKey });
+      // Socket will handle the update
     } catch (err) {
-      const data = err.response?.data;
-      let msg = data?.message || data?.error || 'Error adding device';
-
-      if (data?.existingDevice) {
-        const d = data.existingDevice;
-        msg += `\n\nExisting Device:\n${d.name} (${d.type}) - ${d.location}`;
-      }
-
-      alert(msg);
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to apply mood');
     }
   };
+
+  const handleDeleteRoom = async (roomId) => {
+    try {
+      await api.delete(`/rooms/${roomId}`);
+      // Socket will handle the UI update
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to delete room');
+    }
+  };
+
+  /* -------------------- RENDER GUARDS -------------------- */
+  if (loading) return null;
+  if (!user) return null;
+
+
 
   /* -------------------- DERIVED DATA -------------------- */
   // Combined filter: room + type + search query
   const filteredDevices = devices.filter((d) => {
-    const roomMatch = selectedRoom ? d.location === selectedRoom : false;
+    const roomMatch = selectedRoom ? d.location === selectedRoom.name : false;
     const typeMatch = filterType ? d.type === filterType : true;
     const searchMatch = searchQuery ? d.name.toLowerCase().includes(searchQuery.toLowerCase()) : true;
     return roomMatch && typeMatch && searchMatch;
@@ -210,7 +263,7 @@ export default function Dashboard() {
 
   // Running devices count (respects room filter only, for subtitle)
   const runningDevicesCount = selectedRoom
-    ? devices.filter((d) => d.location === selectedRoom && d.status === 'on').length
+    ? devices.filter((d) => d.location === selectedRoom.name && d.status === 'on').length
     : 0;
 
   // Aggregate activity logs from all devices
@@ -336,16 +389,14 @@ export default function Dashboard() {
               </p>
             ) : (
               rooms.map((room) => (
-                <button
-                  key={room}
+                <RoomItem
+                  key={room._id}
+                  room={room}
+                  isSelected={selectedRoom?._id === room._id}
                   onClick={() => setSelectedRoom(room)}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition ${selectedRoom === room
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-700/50 hover:bg-slate-700 text-slate-200'
-                    }`}
-                >
-                  {room}
-                </button>
+                  isAdmin={user.role === 'admin'}
+                  onDeleteRoom={handleDeleteRoom}
+                />
               ))
             )}
           </div>
@@ -420,22 +471,22 @@ export default function Dashboard() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-2xl font-bold">
-                My Workstation{selectedRoom && <span className="text-indigo-400"> – {selectedRoom}</span>}
+                My Workstation{selectedRoom && <span className="text-indigo-400"> – {selectedRoom.name}</span>}
               </h1>
               <p className="text-sm text-slate-400 mt-1">
                 {selectedRoom ? (
                   <>
-                    {runningDevicesCount} device{runningDevicesCount !== 1 && 's'} running in {selectedRoom}
+                    {runningDevicesCount} device{runningDevicesCount !== 1 && 's'} running in {selectedRoom.name}
                   </>
                 ) : (
                   'Select a room to view devices'
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Add Device Button removed from here */}
-            </div>
           </div>
+
+
+
 
           {/* Filter Row & Add Device */}
           <div className="flex items-center justify-between gap-2">
@@ -637,7 +688,13 @@ export default function Dashboard() {
                   {['Calm', 'Good Night', 'Chill', 'Relax'].map((mood) => (
                     <button
                       key={mood}
-                      className="px-4 py-2 rounded-lg bg-slate-900/50 hover:bg-indigo-600/20 border border-slate-700 hover:border-indigo-500 text-sm transition"
+                      onClick={() => handleApplyMood(mood)}
+                      disabled={!selectedRoom}
+                      className={`px-4 py-2 rounded-lg border text-sm transition ${selectedRoom
+                        ? 'bg-slate-900/50 hover:bg-indigo-600/20 border-slate-700 hover:border-indigo-500 cursor-pointer'
+                        : 'bg-slate-800/50 border-slate-700 text-slate-500 cursor-not-allowed'
+                        }`}
+                      title={selectedRoom ? `Apply ${mood} mood` : 'Select a room first'}
                     >
                       {mood}
                     </button>
@@ -653,15 +710,19 @@ export default function Dashboard() {
                     {['24h', '7d', '30d'].map((period) => (
                       <button
                         key={period}
-                        className="px-2 py-1 text-xs rounded bg-slate-900/50 hover:bg-slate-900 text-slate-400 hover:text-white transition"
+                        onClick={() => setEnergyRange(period)}
+                        className={`px-2 py-1 text-xs rounded transition ${energyRange === period
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                          : 'bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900'
+                          }`}
                       >
                         {period}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="h-48 rounded-lg bg-slate-900/50 border border-dashed border-slate-700 flex items-center justify-center">
-                  <p className="text-xs text-slate-500">Graph placeholder</p>
+                <div className="h-48 mt-2">
+                  <ElectricityConsumption range={energyRange} />
                 </div>
               </div>
             </div>
@@ -716,6 +777,6 @@ export default function Dashboard() {
           )}
         </div>
       </aside>
-    </div>
+    </div >
   );
 }

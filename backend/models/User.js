@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   houseName: { type: String, required: true },
-  authorized: { type: Boolean, default: function() { return this.role === 'admin'; } },
+  authorized: { type: Boolean, default: function () { return this.role === 'admin'; } },
   photo: { type: String, default: null }
 }, { timestamps: true });
 

@@ -1,7 +1,41 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function DeviceCard({ device, onUpdate }) {
+  const { user } = useContext(AuthContext);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleDeleteClick = () => {
+    setMenuOpen(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await api.delete(`/devices/${device._id}`);
+      // Socket in Dashboard will handle removal
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete device');
+      setShowDeleteConfirm(false);
+    }
+  };
+
   // --- HELPERS ---
   const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
   const isOn = device.status === 'on';
@@ -180,15 +214,37 @@ export default function DeviceCard({ device, onUpdate }) {
   return (
     <div className="relative group p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:shadow-xl hover:border-amber-500/30 transition-all duration-300 overflow-hidden">
 
+      {/* DELETE CONFIRMATION OVERLAY */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-4 animate-in fade-in duration-200">
+          <p className="text-amber-500 font-bold mb-1">⚠️ Removing Device</p>
+          <p className="text-slate-300 text-sm mb-4">This action cannot be undone.</p>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-800/20 to-black/60 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col h-full justify-between min-h-[150px]">
 
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-4 relative">
           <div>
-            <h3 className="text-lg font-bold text-white mb-1 leading-tight">
+            <h3 className="text-lg font-bold text-white mb-1 leading-tight pr-4">
               {device.name}
             </h3>
             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -197,8 +253,35 @@ export default function DeviceCard({ device, onUpdate }) {
               <span>{device.location}</span>
             </div>
           </div>
-          {/* Status Dot */}
-          <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isOn ? 'bg-amber-500 shadow-amber-500/50' : 'bg-slate-700'}`} />
+
+          <div className="flex items-center gap-2">
+            {/* Status Dot */}
+            <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isOn ? 'bg-amber-500 shadow-amber-500/50' : 'bg-slate-700'}`} />
+
+            {/* Admin Menu (3 dots) */}
+            {user?.role === 'admin' && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-700/50 text-slate-400 transition"
+                >
+                  <span>⋮</span>
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-8 z-50 min-w-max bg-[#1e232d]/90 backdrop-blur-sm border border-white/10 rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.35)] p-[10px]">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteClick(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm font-medium text-[#ff6b6b] hover:bg-[#ff6b6b]/10 rounded flex items-center gap-2 transition-colors duration-150 whitespace-nowrap tracking-wide"
+                    >
+                      {/* Optional accent dot */}
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b6b]" />
+                      Remove device
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* CONTROLS ROW */}
@@ -217,8 +300,8 @@ export default function DeviceCard({ device, onUpdate }) {
               <button
                 onClick={toggle}
                 className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-95 ${isOn
-                    ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-orange-500/20'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
+                  ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-orange-500/20'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
                   }`}
                 title={isOn ? 'Turn Off' : 'Turn On'}
               >
