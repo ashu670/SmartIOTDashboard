@@ -1,286 +1,269 @@
-# SmartHome360 - Complete IoT Dashboard Project
+SmartHome360 — Complete IOT dashboard project
 
-A full-stack SmartHome IoT Dashboard built with React (Vite) frontend and Node.js/Express backend with MongoDB.
+SmartHome360 is a full-stack Smart Home IoT Dashboard that allows users to monitor, control, and manage all smart devices in their home from a single interface — including devices, rooms, energy usage, system logs, and a media/music system with Spotify integration.
 
-## 🚀 Features
+Mental model
+SmartHome360 is the product.
+Media Control is just another smart device, like AC or Lights.
 
-- User authentication (Register/Login with JWT)
-- Device management (Add, view, toggle devices)
-- Device types: Light, Thermostat, Alarm
-- Admin panel for device approval
-- Real-time updates via Socket.io
-- Activity logging
-- Responsive UI with Tailwind CSS
+Key Highlights
 
-## 📋 Prerequisites
+Secure authentication using JWT
 
-- **Node.js** (v14 or higher)
-- **MongoDB** (running locally or MongoDB Atlas connection string)
-- **npm** (comes with Node.js)
+Family member and role-based access
 
-## 🛠️ Setup Instructions
+Room-based device organization
 
-### 1. Install Dependencies
+Electricity consumption analytics
 
-#### Backend
-```bash
-cd backend
-npm install
-```
+Activity and system logs
 
-#### Frontend
-```bash
-cd frontend
-npm install
-```
+Media Control using Spotify OAuth
 
-### 2. Configure Environment Variables
+Dark and light themes via CSS variables
 
-#### Backend
-Create a `.env` file in the `backend` directory:
+Modular frontend and backend architecture
 
-```bash
-cp .env.example backend/.env
-```
+Tech Stack
+Frontend
 
-Or manually create `backend/.env` with:
-```
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/smarthome
-JWT_SECRET=your_jwt_secret_here_change_this
-```
+React 18 (Vite)
 
-**Important:** Change `JWT_SECRET` to a secure random string!
+Context API
 
-#### Frontend
-Create a `.env` file in the `frontend` directory:
+Tailwind CSS
 
-```
-VITE_API_URL=http://localhost:5000/api
-```
+Axios
 
-### 3. Start MongoDB
+Backend
 
-Make sure MongoDB is running:
+Node.js and Express
 
-- **Windows:** Start MongoDB service or run `mongod`
-- **macOS/Linux:** `sudo systemctl start mongod` or `mongod`
-- **Docker:** `docker run -d -p 27017:27017 mongo`
-- **MongoDB Atlas:** Use your connection string in `MONGO_URI`
+MongoDB with Mongoose
 
-### 4. Run the Application
+JWT authentication
 
-#### Start Backend (Terminal 1)
-```bash
-cd backend
-npm run dev
-```
+Spotify Web API (OAuth)
 
-Backend will run on `http://localhost:5000`
+Media Control (Spotify Integration)
 
-#### Start Frontend (Terminal 2)
-```bash
-cd frontend
-npm run dev
-```
+The Media Control module allows users to control their home music system using Spotify.
 
-Frontend will run on `http://localhost:5173`
+Supported features:
 
-Open your browser to `http://localhost:5173`
+Spotify OAuth login (per user)
 
-## 📁 Project Structure
+Display current track and album art
 
-```
+Play, pause, next, and previous controls
+
+Automatic access token refresh
+
+Graceful fallback when Spotify is not connected
+
+Notes:
+
+Spotify Premium is required for playback control
+
+Spotify tokens are stored only on the backend
+
+Tokens are never exposed to the frontend
+
+Project Structure
 smartiot/
 ├── backend/
 │   ├── config/
-│   │   └── db.js              # MongoDB connection
+│   │   └── db.js
 │   ├── controllers/
-│   │   ├── authController.js  # Authentication logic
-│   │   ├── deviceController.js # Device operations
-│   │   └── adminController.js  # Admin operations
+│   │   ├── adminController.js
+│   │   ├── authController.js
+│   │   ├── deviceController.js
+│   │   ├── familyController.js
+│   │   ├── logController.js
+│   │   ├── roomController.js
+│   │   └── userController.js
 │   ├── middleware/
-│   │   ├── auth.js            # JWT authentication
-│   │   └── admin.js           # Admin authorization
+│   │   ├── auth.js
+│   │   ├── admin.js
+│   │   └── upload.js
 │   ├── models/
-│   │   ├── User.js            # User schema
-│   │   ├── Device.js          # Device schema
-│   │   └── Log.js             # Activity log schema
+│   │   ├── Device.js
+│   │   ├── Log.js
+│   │   ├── PasswordRequest.js
+│   │   ├── Room.js
+│   │   └── User.js
 │   ├── routes/
-│   │   ├── authRoutes.js      # Auth endpoints
-│   │   ├── deviceRoutes.js    # Device endpoints
-│   │   └── adminRoutes.js     # Admin endpoints
+│   │   ├── adminRoutes.js
+│   │   ├── authRoutes.js
+│   │   ├── deviceRoutes.js
+│   │   ├── familyRoutes.js
+│   │   ├── logRoutes.js
+│   │   ├── roomRoutes.js
+│   │   ├── spotifyRoutes.js
+│   │   └── userRoutes.js
+│   ├── services/
+│   │   └── spotifyService.js
 │   ├── utils/
-│   │   └── generateToken.js   # JWT token generation
-│   ├── server.js              # Express server setup
+│   │   └── generateToken.js
+│   ├── server.js
 │   └── package.json
+│
 ├── frontend/
 │   ├── public/
 │   │   └── index.html
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── DeviceCard.jsx  # Device display component
+│   │   │   ├── DeviceCard.jsx
+│   │   │   ├── ElectricityConsumption.jsx
+│   │   │   ├── MediaControl.jsx
+│   │   │   └── RoomItem.jsx
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx # Auth state management
+│   │   │   └── AuthContext.jsx
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx   # Main dashboard
-│   │   │   ├── LoginPage.jsx   # Login page
-│   │   │   ├── RegisterPage.jsx # Registration page
-│   │   │   └── AdminPanel.jsx  # Admin panel
+│   │   │   ├── AdminPanel.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── ManageMembers.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   └── RegisterPage.jsx
 │   │   ├── services/
-│   │   │   └── api.js          # Axios API client
-│   │   ├── App.jsx             # Main app component
-│   │   └── main.jsx            # Entry point
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
 │   ├── vite.config.js
 │   ├── tailwind.config.js
 │   └── package.json
+│
 ├── .env.example
 ├── .gitignore
 └── README.md
-```
 
-## 🔌 API Endpoints
+Setup Instructions
+Prerequisites
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
+Node.js v14 or higher
 
-### Devices (Requires Auth)
-- `GET /api/devices` - Get user's devices
-- `POST /api/devices` - Add new device
-- `PUT /api/devices/:id/toggle` - Toggle device status
-- `PUT /api/devices/:id/thermostat` - Update thermostat value
+MongoDB (local or Atlas)
 
-### Admin (Requires Admin Role)
-- `GET /api/admin/pending` - Get pending devices
-- `PUT /api/admin/approve/:id` - Approve device
+npm
 
-## 👤 Creating an Admin User
+Install dependencies
 
-### Method 1: Using the Seeder Script (Recommended)
+Backend:
 
-Run the admin seeder script:
-
-```bash
 cd backend
-npm run seed:admin
-```
+npm install
 
-This will create an admin user with:
-- **Email:** `admin@smarthome.com` (default)
-- **Password:** `admin123` (default)
-- **Name:** `Admin User` (default)
 
-**To customize the admin credentials**, add these to your `backend/.env`:
-```
-ADMIN_EMAIL=your-admin@email.com
-ADMIN_PASSWORD=your-secure-password
-ADMIN_NAME=Your Admin Name
-```
+Frontend:
 
-Then run the seeder again:
-```bash
+cd frontend
+npm install
+
+Environment variables
+
+Backend (backend/.env):
+
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/smarthome360
+JWT_SECRET=your_secure_jwt_secret
+
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:5000/api/spotify/callback
+
+
+Important: Spotify redirect URI must use 127.0.0.1, not localhost.
+
+Frontend (frontend/.env):
+
+VITE_API_URL=http://localhost:5000/api
+
+Run the application
+
+Start MongoDB:
+
+mongod
+
+
+Start backend:
+
 cd backend
-npm run seed:admin
-```
+npm run dev
 
-### Method 2: Using MongoDB Directly
 
-If you already have a user account, you can update it to admin:
+Start frontend:
 
-```javascript
-// In MongoDB shell or Compass
-db.users.updateOne(
-  { email: "your-email@example.com" },
-  { $set: { role: "admin" } }
-)
-```
+cd frontend
+npm run dev
 
-### Method 3: Register and Update Manually
 
-1. Register a new user through the web interface
-2. Update the user's role in MongoDB:
-   ```javascript
-   db.users.updateOne(
-     { email: "your-registered-email@example.com" },
-     { $set: { role: "admin" } }
-   )
-   ```
-3. Logout and login again to see admin features
+Frontend runs on http://localhost:5173.
 
-## 🎯 Usage Flow
+API Overview
 
-1. **Register** a new user account
-2. **Login** with your credentials
-3. **Add devices** from the dashboard (they will be pending approval)
-4. **Login as admin** and approve devices from the Admin Panel
-5. **Toggle/Control** your approved devices
-6. View real-time updates via Socket.io
+Authentication:
 
-## 🐛 Troubleshooting
+POST /api/auth/register
 
-### MongoDB Connection Error
-- Ensure MongoDB is running: `mongod` or check service status
-- Verify `MONGO_URI` in `backend/.env` is correct
-- Check MongoDB is accessible on port 27017
+POST /api/auth/login
 
-### Port Already in Use
-- Change `PORT` in `backend/.env` if 5000 is taken
-- Change Vite port in `frontend/vite.config.js` if 5173 is taken
+Devices:
 
-### CORS Errors
-- Ensure backend CORS allows frontend origin
-- Check `VITE_API_URL` in `frontend/.env` matches backend URL
+GET /api/devices
 
-### Socket.io Not Working
-- Ensure socket client connects to correct URL (without `/api`)
-- Check backend Socket.io CORS configuration
+POST /api/devices
 
-### Dependencies Not Installing
-- Delete `node_modules` folders and `package-lock.json` files
-- Run `npm install` again
-- Check Node.js version: `node --version` (should be v14+)
+PUT /api/devices/:id
 
-## 📦 Technologies Used
+Rooms:
 
-### Backend
-- Express.js - Web framework
-- MongoDB + Mongoose - Database
-- JWT - Authentication
-- Socket.io - Real-time communication
-- bcryptjs - Password hashing
+GET /api/rooms
 
-### Frontend
-- React 18 - UI library
-- Vite - Build tool
-- React Router - Routing
-- Axios - HTTP client
-- Socket.io-client - Real-time client
-- Tailwind CSS - Styling
+POST /api/rooms
 
-## 🚀 Deployment Notes
+Logs:
 
-### Backend Deployment
-- Set environment variables on hosting platform
-- Use MongoDB Atlas for cloud database
-- Update CORS to allow frontend domain
+GET /api/logs
 
-### Frontend Deployment
-- Build: `npm run build` in frontend directory
-- Deploy `dist` folder to hosting (Vercel, Netlify, etc.)
-- Update `VITE_API_URL` to production backend URL
+Spotify:
 
-## 📝 License
+GET /api/spotify/login
+
+GET /api/spotify/callback
+
+GET /api/spotify/player
+
+UI / UX Constraints
+
+Dashboard layout is locked
+
+Media Control is an add-on, not a redesign
+
+No hardcoded colors (CSS variables only)
+
+Theme switching must not break layout
+
+No Spotify iframes or embeds
+
+Deployment Notes
+
+Backend:
+
+Use MongoDB Atlas in production
+
+Configure environment variables on the server
+
+Update CORS for frontend domain
+
+Frontend:
+
+npm run build
+
+
+Deploy the dist folder and update VITE_API_URL.
+
+License
 
 ISC
-
-## 👨‍💻 Development
-
-For development, both servers support hot-reload:
-- Backend: `nodemon` automatically restarts on file changes
-- Frontend: Vite HMR (Hot Module Replacement) updates instantly
-
----
-
-**Good luck with your SmartHome360 project!** 🏠✨
-
