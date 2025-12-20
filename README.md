@@ -1,76 +1,56 @@
-SmartHome360 — Complete IOT dashboard project
+# SmartHome360 — Complete IoT Dashboard Project
 
-SmartHome360 is a full-stack Smart Home IoT Dashboard that allows users to monitor, control, and manage all smart devices in their home from a single interface — including devices, rooms, energy usage, system logs, and a media/music system with Spotify integration.
+SmartHome360 is a full-stack Smart Home IoT dashboard for controlling and monitoring home devices from a single interface.
 
-Mental model
-SmartHome360 is the product.
-Media Control is just another smart device, like AC or Lights.
+Media Control (Spotify) is treated as a normal smart device, not a layout change.
 
-Key Highlights
+---
 
-Secure authentication using JWT
+## Features
 
-Family member and role-based access
+- JWT based authentication
+- Family members and role-based access
+- Room-based device organization
+- Electricity consumption analytics
+- Activity and system logs
+- Spotify media control
+- Dark / light themes using CSS variables
 
-Room-based device organization
+---
 
-Electricity consumption analytics
+## Tech Stack
 
-Activity and system logs
+### Frontend
+- React 18 (Vite)
+- Context API
+- Tailwind CSS
+- Axios
 
-Media Control using Spotify OAuth
+### Backend
+- Node.js
+- Express
+- MongoDB + Mongoose
+- JWT
+- Spotify Web API (OAuth)
 
-Dark and light themes via CSS variables
+---
 
-Modular frontend and backend architecture
+## Media Control (Spotify)
 
-Tech Stack
-Frontend
+- Per-user Spotify OAuth login
+- Current track and album art
+- Play / Pause / Next / Previous
+- Backend token storage and refresh
+- Safe fallback when Spotify is not linked
 
-React 18 (Vite)
+Spotify Premium is required.  
+Tokens are never exposed to the frontend.
 
-Context API
+---
 
-Tailwind CSS
-
-Axios
-
-Backend
-
-Node.js and Express
-
-MongoDB with Mongoose
-
-JWT authentication
-
-Spotify Web API (OAuth)
-
-Media Control (Spotify Integration)
-
-The Media Control module allows users to control their home music system using Spotify.
-
-Supported features:
-
-Spotify OAuth login (per user)
-
-Display current track and album art
-
-Play, pause, next, and previous controls
-
-Automatic access token refresh
-
-Graceful fallback when Spotify is not connected
-
-Notes:
-
-Spotify Premium is required for playback control
-
-Spotify tokens are stored only on the backend
-
-Tokens are never exposed to the frontend
-
-Project Structure
-smartiot/
+## Project Structure
+```
+SmartIOTDashboard/
 ├── backend/
 │   ├── config/
 │   │   └── db.js
@@ -138,132 +118,142 @@ smartiot/
 ├── .env.example
 ├── .gitignore
 └── README.md
-
-Setup Instructions
-Prerequisites
-
-Node.js v14 or higher
-
-MongoDB (local or Atlas)
-
-npm
-
-Install dependencies
-
-Backend:
-
-cd backend
-npm install
+ ```
 
 
-Frontend:
+---
 
-cd frontend
-npm install
+## Setup
 
-Environment variables
+### Prerequisites
 
-Backend (backend/.env):
+<pre>Node.js v14+
+MongoDB
+npm</pre>
 
-PORT=5000
+
+---
+
+## Install Dependencies
+
+### Backend
+
+
+
+<pre>cd backend
+npm install</pre>
+
+
+### Frontend
+
+
+
+<pre>cd frontend
+npm install</pre>
+
+
+---
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+<pre>PORT=5000
 MONGO_URI=mongodb://localhost:27017/smarthome360
 JWT_SECRET=your_secure_jwt_secret
 
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:5000/api/spotify/callback
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:5000/api/spotify/callback</pre>
 
 
-Important: Spotify redirect URI must use 127.0.0.1, not localhost.
+Do not use `localhost` for Spotify redirect URI.
 
-Frontend (frontend/.env):
+### Frontend (`frontend/.env`)
 
-VITE_API_URL=http://localhost:5000/api
-
-Run the application
-
-Start MongoDB:
-
-mongod
+<pre>VITE_API_URL=http://localhost:5000/api</pre>
 
 
-Start backend:
+---
 
-cd backend
-npm run dev
+## Run
 
+### Start MongoDB
 
-Start frontend:
+<pre>mongod</pre>
 
-cd frontend
-npm run dev
+### Start Backend
 
+<pre>cd backend
+npm run dev</pre>
 
-Frontend runs on http://localhost:5173.
+### Start Frontend
 
-API Overview
+<pre>cd frontend
+npm run dev</pre>
 
-Authentication:
+Frontend runs at:
 
-POST /api/auth/register
+<pre>http://localhost:5173</pre>
 
-POST /api/auth/login
+---
 
-Devices:
+## API Overview
 
-GET /api/devices
+### Auth
 
+<pre>POST /api/auth/register
+POST /api/auth/login</pre>
+
+### Devices
+
+<pre>GET /api/devices
 POST /api/devices
+PUT /api/devices/:id</pre>
 
-PUT /api/devices/:id
+### Rooms
 
-Rooms:
+<pre>GET /api/rooms
+POST /api/rooms</pre>
 
-GET /api/rooms
+### Logs
 
-POST /api/rooms
+<pre>GET /api/logs</pre>
 
-Logs:
+### Spotify
 
-GET /api/logs
-
-Spotify:
-
-GET /api/spotify/login
-
+<pre>GET /api/spotify/login
 GET /api/spotify/callback
+GET /api/spotify/player</pre>
 
-GET /api/spotify/player
+---
 
-UI / UX Constraints
+## UI / UX Rules
 
-Dashboard layout is locked
+- Dashboard layout must not change
+- Media Control is an add-on only
+- No hardcoded colors
+- No Spotify iframes
+- Theme switching must not break layout
 
-Media Control is an add-on, not a redesign
+---
 
-No hardcoded colors (CSS variables only)
+## Deployment
 
-Theme switching must not break layout
+### Backend
 
-No Spotify iframes or embeds
+- Use MongoDB Atlas
+- Set environment variables
+- Configure CORS
 
-Deployment Notes
+### Frontend
 
-Backend:
+<pre>npm run build</pre>
 
-Use MongoDB Atlas in production
+Deploy the `dist` folder and update `VITE_API_URL`.
 
-Configure environment variables on the server
+---
 
-Update CORS for frontend domain
-
-Frontend:
-
-npm run build
-
-
-Deploy the dist folder and update VITE_API_URL.
-
-License
+## License
 
 ISC
