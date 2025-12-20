@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
     requestedAt: { type: Date },
     resolvedAt: { type: Date }
+  },
+  spotify: {
+    accessToken: { type: String, default: null },
+    refreshToken: { type: String, default: null },
+    expiresAt: { type: Number, default: null }
   }
 }, { timestamps: true });
 

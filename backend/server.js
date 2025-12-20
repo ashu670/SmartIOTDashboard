@@ -33,6 +33,8 @@ app.use('/api/family', familyRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/logs', require('./routes/logRoutes'));
+app.use('/api/spotify', require('./routes/spotifyRoutes'));
+
 
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);

@@ -3,6 +3,7 @@ import api from '../services/api';
 import DeviceCard from '../components/DeviceCard';
 import RoomItem from '../components/RoomItem';
 import ElectricityConsumption from '../components/ElectricityConsumption';
+import Ambience from '../components/Ambience';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
@@ -31,8 +32,6 @@ export default function Dashboard() {
   const [securityLogs, setSecurityLogs] = useState([]);
   const [logTab, setLogTab] = useState('activity'); // 'activity' | 'security'
   const scrollContainerRef = useRef(null);
-
-
 
   /* -------------------- THEME SYSTEM -------------------- */
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -795,26 +794,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Right: Ambience */}
-            <div className="glass-card rounded-2xl p-4">
-              <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Ambience</h3>
-              <div className="ambience-row list-row p-3 rounded-xl">
-                <div className="ambience-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="ambience-title truncate">Lo-Fi Study Beats</p>
-                  <p className="ambience-subtitle truncate">Spotify</p>
-                </div>
-                <button className="ambience-play">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            {/* Right: Ambience (Spotify) */}
+            <Ambience user={user} />
           </div>
         </section>
       </main>
