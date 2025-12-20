@@ -272,8 +272,8 @@ body {
   opacity: 1;
 }
 
-/* --- AMBIENCE CARD (Calm, Utility, No Hero Gradient) --- */
-.ambience-card {
+/* --- MEDIA CONTROL CARD (Calm, Utility, No Hero Gradient) --- */
+.media-control-card {
   background: var(--card-bg);
   /* Standard Card Family */
   border-radius: 16px;
@@ -282,7 +282,7 @@ body {
   border: 1px solid var(--border-subtle);
 }
 
-.ambience-row {
+.media-control-row {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -292,7 +292,7 @@ body {
   padding: 12px;
 }
 
-.ambience-icon {
+.media-control-icon {
   width: 44px;
   height: 44px;
   border-radius: 10px;
@@ -302,13 +302,13 @@ body {
   color: var(--accent-blue);
 }
 
-.ambience-title {
+.media-control-title {
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
 }
 
-.ambience-subtitle {
+.media-control-subtitle {
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -401,8 +401,8 @@ body {
   background: var(--accent-blue-hover);
 }
 
-/* --- AMBIENCE --- */
-.ambience-play {
+/* --- MEDIA CONTROL --- */
+.media-control-play {
   margin-left: auto;
   width: 36px;
   height: 36px;
@@ -416,7 +416,7 @@ body {
   transition: transform 0.2s;
 }
 
-.ambience-play:hover {
+.media-control-play:hover {
   transform: scale(1.05);
 }
 

@@ -3,7 +3,7 @@ import api from '../services/api';
 import DeviceCard from '../components/DeviceCard';
 import RoomItem from '../components/RoomItem';
 import ElectricityConsumption from '../components/ElectricityConsumption';
-import Ambience from '../components/Ambience';
+import MediaControl from '../components/MediaControl';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
@@ -762,26 +762,26 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Bottom Split Section: Most Used + Ambience */}
+          {/* Bottom Split Section: Most Used + Media Control */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-1">
             {/* Left: Most Used */}
             <div className="glass-card rounded-2xl p-4">
               <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Most Used</h3>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {mostUsedDevices.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-4">No usage data yet</p>
                 ) : (
                   mostUsedDevices.map((device) => {
                     return (
-                      <div key={device.deviceId} className="flex items-center gap-3 p-2 list-row">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center">
-                          <span className="text-xl">
+                      <div key={device.deviceId} className="flex items-center gap-3 p-1.5 list-row">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center">
+                          <span className="text-lg">
                             {device.type === 'AC/Heater' ? '❄️' : device.type === 'Lights' ? '💡' : '🌀'}
                           </span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{device.name}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs font-semibold">{device.name}</p>
+                          <p className="text-[10px] text-slate-400">
                             {device.lastUsed
                               ? `Last used ${new Date(device.lastUsed).toLocaleDateString()}`
                               : 'Never used'}
@@ -794,8 +794,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Right: Ambience (Spotify) */}
-            <Ambience user={user} />
+            {/* Right: Media Control (Spotify) */}
+            <MediaControl user={user} />
           </div>
         </section>
       </main>
@@ -845,9 +845,9 @@ export default function Dashboard() {
                 <p className="text-sm text-[var(--text-secondary)] mt-2">{formattedDate}</p>
               </div>
 
-              {/* Mood Setup */}
+              {/* Ambience */}
               <div className="glass-card rounded-2xl p-4">
-                <p className="text-sm font-semibold mb-3 text-[var(--text-primary)]">Mood Setup</p>
+                <p className="text-sm font-semibold mb-3 text-[var(--text-primary)]">Ambience</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Calm', 'Good Night', 'Chill', 'Relax'].map((mood) => (
                     <button
