@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { addDevice, getUserDevices, toggleDevice, updateTemperature, updateBrightness, updateColor, updateSpeed, deleteDevice } = require('../controllers/deviceController');
+const { addDevice, getUserDevices, toggleDevice, updateTemperature, updateBrightness, updateColor, updateSpeed, deleteDevice, getMostUsedDevices } = require('../controllers/deviceController');
 
 router.post('/', auth, addDevice);
 router.get('/', auth, getUserDevices);
+router.get('/most-used', auth, getMostUsedDevices);
 router.put('/:id/toggle', auth, toggleDevice);
 router.put('/:id/temperature', auth, updateTemperature);
 router.put('/:id/brightness', auth, updateBrightness);

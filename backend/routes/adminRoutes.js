@@ -3,9 +3,9 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const upload = require('../middleware/upload');
-const { 
-  getPendingDevices, 
-  approveDevice, 
+const {
+  getPendingDevices,
+  approveDevice,
   removeDevice,
   getAllUsers,
   getUserDevices,
@@ -15,11 +15,14 @@ const {
   authorizeUser,
   updatePhoto,
   getAdminProfile,
-  getDeviceActivity
+  getDeviceActivity,
+  updateUserRole,
+  getSecurityLogs
 } = require('../controllers/adminController');
 
 // Admin profile
 router.get('/profile', auth, admin, getAdminProfile);
+router.get('/logs/security', auth, admin, getSecurityLogs);
 
 // Device management
 router.get('/pending', auth, admin, getPendingDevices);
@@ -33,6 +36,7 @@ router.post('/users', auth, admin, upload.single('photo'), addUser);
 router.get('/users/:userId/devices', auth, admin, getUserDevices);
 router.put('/users/:userId/password', auth, admin, changeUserPassword);
 router.put('/users/:userId/authorize', auth, admin, authorizeUser);
+router.patch('/users/:userId/role', auth, admin, updateUserRole);
 router.put('/users/:userId/photo', auth, upload.single('photo'), updatePhoto);
 router.delete('/users/:userId', auth, admin, deleteUser);
 

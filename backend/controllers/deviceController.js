@@ -403,3 +403,57 @@ exports.deleteDevice = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+exports.getMostUsedDevices = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 4;
+
+    // Find all users in the house to filter logs
+    const houseUsers = await User.find({ houseName: req.user.houseName }).select('_id');
+    const userIds = houseUsers.map(u => u._id);
+
+    // Aggregate logs to find most used devices
+    const usage = await Log.aggregate([
+      {
+        $match: {
+          userId: { $in: userIds },
+          deviceId: { $exists: true, $ne: null } // Ensure it's a device log
+        }
+      },
+      {
+        $group: {
+          _id: '$deviceId',
+          count: { $sum: 1 },
+          lastUsed: { $max: '$timestamp' }
+        }
+      },
+      { $sort: { count: -1, lastUsed: -1 } },
+      { $limit: limit },
+      // Lookup device details
+      {
+        $lookup: {
+          from: 'devices',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'device'
+        }
+      },
+      { $unwind: '$device' },
+      // Project final shape
+      {
+        $project: {
+          deviceId: '$_id',
+          name: '$device.name',
+          type: '$device.type',
+          count: 1,
+          lastUsed: 1
+        }
+      }
+    ]);
+
+    res.json(usage);
+  } catch (err) {
+    console.error('Error fetching most used devices:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

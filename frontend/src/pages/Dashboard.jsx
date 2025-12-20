@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import api from '../services/api';
 import DeviceCard from '../components/DeviceCard';
 import RoomItem from '../components/RoomItem';
@@ -28,8 +28,85 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [familyMembers, setFamilyMembers] = useState([]);
   const [activeTab, setActiveTab] = useState('info');
+  const [securityLogs, setSecurityLogs] = useState([]);
+  const [logTab, setLogTab] = useState('activity'); // 'activity' | 'security'
+  const scrollContainerRef = useRef(null);
+
+  /* -------------------- HORIZONTAL SCROLL UX -------------------- */
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Check if scrolling is possible/needed
+  const checkScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    // 1px buffer for sub-pixel rendering differences
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  };
+
+  // Scroll Helpers
+  const scrollLeft = () => {
+    const el = scrollContainerRef.current;
+    if (el) {
+      const cardWidth = el.firstElementChild?.clientWidth || 320;
+      el.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    const el = scrollContainerRef.current;
+    if (el) {
+      const cardWidth = el.firstElementChild?.clientWidth || 320;
+      el.scrollBy({ left: cardWidth, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      // Allow native vertical scroll.
+      // Only hijack if Shift is pressed to force horizontal scroll interaction with Wheel
+      if (e.shiftKey && e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    // Attach listeners
+    el.addEventListener('wheel', onWheel);
+    el.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
+
+    // Initial check
+    checkScroll();
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [devices, selectedRoom]); // Re-check when devices list changes
+
 
   /* -------------------- AUTH + SOCKET -------------------- */
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchSecurityLogs();
+    }
+  }, [user]);
+
+  const fetchSecurityLogs = async () => {
+    try {
+      const res = await api.get('/admin/logs/security');
+      setSecurityLogs(res.data.logs || []);
+    } catch (err) {
+      console.error('Error fetching security logs:', err);
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
 
@@ -50,6 +127,7 @@ export default function Dashboard() {
       setDevices((prev) =>
         prev.map((d) => (d._id === updated._id ? updated : d))
       );
+      fetchMostUsed();
     });
 
     s.on('deviceApproved', (approved) => {
@@ -85,12 +163,25 @@ export default function Dashboard() {
     return () => s.disconnect();
   }, [user, loading, navigate]);
 
+  // Most Used Devices (Fetched from backend)
+  const [mostUsedDevices, setMostUsedDevices] = useState([]);
+
+  const fetchMostUsed = async () => {
+    try {
+      const res = await api.get('/devices/most-used?limit=4');
+      setMostUsedDevices(res.data);
+    } catch (err) {
+      console.error('Error fetching most used devices:', err);
+    }
+  };
+
   /* -------------------- FETCH DEVICES -------------------- */
   useEffect(() => {
     if (user) {
       fetchRooms();
       fetchDevices();
       fetchFamilyMembers();
+      fetchMostUsed();
     }
   }, [user]);
 
@@ -279,27 +370,7 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, 20); // Show latest 20 logs
 
-  // Calculate most used devices (based on activity log frequency)
-  const deviceUsageCount = devices.reduce((acc, device) => {
-    const count = device.activityLog?.length || 0;
-    acc[device._id] = {
-      device,
-      count,
-      lastUsed: device.activityLog && device.activityLog.length > 0
-        ? new Date(Math.max(...device.activityLog.map(l => new Date(l.timestamp))))
-        : null
-    };
-    return acc;
-  }, {});
 
-  const mostUsedDevices = Object.values(deviceUsageCount)
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      if (a.lastUsed && b.lastUsed) return b.lastUsed - a.lastUsed;
-      return 0;
-    })
-    .slice(0, 4)
-    .map(item => item.device);
 
   // Placeholder date/time
   const now = new Date();
@@ -323,7 +394,10 @@ export default function Dashboard() {
       {/* ========== LEFT SIDEBAR ========== */}
       <aside className="w-64 shrink-0 flex flex-col gap-4 p-4 border-r border-slate-800 bg-slate-900/60 overflow-y-auto">
         {/* --- Profile Section --- */}
-        <div className="bg-slate-800/70 rounded-2xl p-4 flex items-center gap-3">
+        <div
+          onClick={() => navigate('/profile')}
+          className="bg-slate-800/50 rounded-2xl p-3 flex items-center gap-3 mb-6 cursor-pointer"
+        >
           {user.photo ? (
             <img
               src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${user.photo}`}
@@ -413,23 +487,65 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* --- Activity Logs Section --- */}
+
         <div className="bg-slate-800/50 rounded-2xl p-3 flex flex-col" style={{ maxHeight: '250px' }}>
-          <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Activity Logs</p>
+
+          {user.role === 'admin' ? (
+            <div className="flex items-center gap-4 mb-3 border-b border-slate-700/50 pb-2">
+              <button
+                onClick={() => setLogTab('activity')}
+                className={`text-xs font-bold uppercase tracking-wide transition ${logTab === 'activity' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+              >
+                Activity Logs
+              </button>
+              <button
+                onClick={() => setLogTab('security')}
+                className={`text-xs font-bold uppercase tracking-wide transition ${logTab === 'security' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+              >
+                Security Logs
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Activity Logs</p>
+          )}
+
           <div className="overflow-y-auto space-y-2 flex-1">
-            {activityLogs.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">No activity logs yet</p>
-            ) : (
-              activityLogs.map((log, idx) => (
-                <div key={idx} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg">
-                  <p className="truncate">
-                    <span className="font-semibold">{log.deviceLocation} {log.deviceName}</span> {log.action} by {log.userName || 'Unknown'}
-                  </p>
-                  <p className="text-slate-500 text-[10px] mt-1">
-                    {new Date(log.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              ))
+            {/* ACTIVITY LOGS */}
+            {logTab === 'activity' && (
+              activityLogs.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">No activity logs yet</p>
+              ) : (
+                activityLogs.map((log, idx) => (
+                  <div key={idx} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg">
+                    <p className="truncate">
+                      <span className="font-semibold">{log.deviceLocation} {log.deviceName}</span> {log.action} by {log.userName || 'Unknown'}
+                    </p>
+                    <p className="text-slate-500 text-[10px] mt-1">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )
+            )}
+
+            {/* SECURITY LOGS */}
+            {logTab === 'security' && (
+              securityLogs.length === 0 ? (
+                <p className="text-xs text-slate-600 italic text-center py-4">No security events recorded yet.</p>
+              ) : (
+                securityLogs.map((log) => (
+                  <div key={log._id} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg border-l-2 border-indigo-500/50">
+                    <p className="">
+                      <span className="text-slate-200">{log.action}</span>
+                    </p>
+                    <p className="text-slate-500 text-[10px] mt-1 flex justify-between">
+                      <span>{new Date(log.timestamp).toLocaleString()}</span>
+                    </p>
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>
@@ -566,25 +682,55 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Devices Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {!selectedRoom ? (
-              <p className="col-span-full text-center text-slate-500">
-                Select a room to view devices
-              </p>
-            ) : filteredDevices.length === 0 ? (
-              <p className="col-span-full text-center text-slate-500">
-                No devices in this room
-              </p>
-            ) : (
-              filteredDevices.map((d) => (
-                <DeviceCard key={d._id} device={d} onUpdate={onUpdateDevice} />
-              ))
+          {/* Devices Grid (Horizontal Scroll - Wheel Enhanced - Fixed 3 Col - Vertically Restored - Snapped - With Buttons) */}
+          <div className="relative group">
+            {/* Left Scroll Button */}
+            {canScrollLeft && (
+              <button
+                onClick={scrollLeft}
+                className="absolute left-[-12px] top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-slate-800/80 border border-slate-600 text-slate-300 shadow-lg hover:bg-slate-700 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                aria-label="Scroll devices left"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+
+            <div ref={scrollContainerRef} className="flex overflow-x-auto overflow-y-hidden py-4 gap-4 no-scrollbar min-h-[280px] snap-x snap-mandatory">
+              {!selectedRoom ? (
+                <p className="w-full text-center text-slate-500 py-10">
+                  Select a room to view devices
+                </p>
+              ) : filteredDevices.length === 0 ? (
+                <p className="w-full text-center text-slate-500 py-10">
+                  No devices in this room
+                </p>
+              ) : (
+                filteredDevices.map((d) => (
+                  <div key={d._id} className="flex-none w-full md:w-[calc((100%-1rem)/2)] xl:w-[calc((100%-2rem)/3)] h-full snap-start">
+                    <DeviceCard device={d} onUpdate={onUpdateDevice} />
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Right Scroll Button */}
+            {canScrollRight && (
+              <button
+                onClick={scrollRight}
+                className="absolute right-[-12px] top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-slate-800/80 border border-slate-600 text-slate-300 shadow-lg hover:bg-slate-700 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                aria-label="Scroll devices right"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             )}
           </div>
 
           {/* Bottom Split Section: Most Used + Ambience */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-1">
             {/* Left: Most Used */}
             <div className="bg-slate-800/70 rounded-2xl p-4">
               <h3 className="text-lg font-semibold mb-3">Most Used</h3>
@@ -593,10 +739,8 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-500 text-center py-4">No usage data yet</p>
                 ) : (
                   mostUsedDevices.map((device) => {
-                    const usage = deviceUsageCount[device._id];
-                    const lastUsed = usage?.lastUsed;
                     return (
-                      <div key={device._id} className="flex items-center gap-3 p-2 bg-slate-900/50 rounded-lg">
+                      <div key={device.deviceId} className="flex items-center gap-3 p-2 bg-slate-900/50 rounded-lg">
                         <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center">
                           <span className="text-xl">
                             {device.type === 'AC/Heater' ? '❄️' : device.type === 'Lights' ? '💡' : '🌀'}
@@ -605,8 +749,8 @@ export default function Dashboard() {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{device.name}</p>
                           <p className="text-xs text-slate-400">
-                            {lastUsed
-                              ? `Last used ${new Date(lastUsed).toLocaleDateString()}`
+                            {device.lastUsed
+                              ? `Last used ${new Date(device.lastUsed).toLocaleDateString()}`
                               : 'Never used'}
                           </p>
                         </div>

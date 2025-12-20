@@ -7,7 +7,12 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   houseName: { type: String, required: true },
   authorized: { type: Boolean, default: function () { return this.role === 'admin'; } },
-  photo: { type: String, default: null }
+  photo: { type: String, default: null },
+  passwordResetRequest: {
+    status: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+    requestedAt: { type: Date },
+    resolvedAt: { type: Date }
+  }
 }, { timestamps: true });
 
 // Ensure one admin per house

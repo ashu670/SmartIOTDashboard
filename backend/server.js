@@ -31,9 +31,17 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/logs', require('./routes/logRoutes'));
 
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);
+
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`Socket ${socket.id} joined user room ${userId}`);
+  });
+
   socket.on('disconnect', () => console.log('socket disconnected', socket.id));
 });
 
