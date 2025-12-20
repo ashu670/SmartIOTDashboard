@@ -119,20 +119,30 @@ export default function DeviceCard({ device, onUpdate }) {
     return (
       <div className="flex flex-col items-start gap-1">
         <span className="text-3xl font-light text-amber-400 leading-none">
-          {temp}°<span className="text-sm text-slate-500 ml-1">C</span>
+          {temp}°<span className="text-sm ml-1" style={{ color: 'var(--text-muted)' }}>C</span>
         </span>
         <div className="flex items-center gap-2 mt-2">
           <button
             onClick={() => setTemperature(temp - 1)}
             disabled={!isOn || temp <= 16}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--bg-card-inner)',
+              borderColor: 'var(--border-subtle)',
+              color: 'var(--text-secondary)'
+            }}
           >
             -
           </button>
           <button
             onClick={() => setTemperature(temp + 1)}
             disabled={!isOn || temp >= 30}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--bg-card-inner)',
+              borderColor: 'var(--border-subtle)',
+              color: 'var(--text-secondary)'
+            }}
           >
             +
           </button>
@@ -150,7 +160,8 @@ export default function DeviceCard({ device, onUpdate }) {
       <div className="flex flex-col gap-3 w-full max-w-[140px]">
         {/* Top: Color Picker + % Value */}
         <div className="flex items-center gap-3">
-          <div className="relative w-8 h-8 rounded-full border border-slate-600 overflow-hidden shadow-sm hover:scale-105 transition-transform">
+          <div className="relative w-8 h-8 rounded-full border overflow-hidden shadow-sm hover:scale-105 transition-transform"
+            style={{ borderColor: 'var(--border-subtle)' }}>
             <input
               type="color"
               value={color}
@@ -160,7 +171,7 @@ export default function DeviceCard({ device, onUpdate }) {
               className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
             {Math.round((brightness / 10) * 100)}%
           </span>
         </div>
@@ -176,7 +187,7 @@ export default function DeviceCard({ device, onUpdate }) {
             onMouseUp={commitBrightness} // Commit on release (Mouse)
             onTouchEnd={commitBrightness} // Commit on release (Touch)
             disabled={!isOn}
-            className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full h-1.5 bg-[var(--bg-card-inner)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-blue)] disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(0,0,0,0.3)]"
           />
         </div>
       </div>
@@ -187,21 +198,21 @@ export default function DeviceCard({ device, onUpdate }) {
     const speed = device.speed ?? 1;
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="text-xl font-medium text-slate-300">
+        <span className="text-xl font-medium" style={{ color: 'var(--text-primary)' }}>
           Speed {speed}
         </span>
         <div className="flex items-center gap-2 mt-2">
           <button
             onClick={() => setSpeed(speed - 1)}
             disabled={!isOn || speed <= 1}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card-inner)] text-[var(--text-secondary)] hover:border-[var(--accent-blue)] hover:text-[var(--accent-blue)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             -
           </button>
           <button
             onClick={() => setSpeed(speed + 1)}
             disabled={!isOn || speed >= 5}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card-inner)] text-[var(--text-secondary)] hover:border-[var(--accent-blue)] hover:text-[var(--accent-blue)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             +
           </button>
@@ -212,23 +223,27 @@ export default function DeviceCard({ device, onUpdate }) {
 
   // Main Card Render
   return (
-    <div className="relative group p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:shadow-xl hover:border-amber-500/30 transition-all duration-300 overflow-hidden">
+    <div className={`relative group p-5 rounded-3xl glass-card bloom-interact overflow-hidden ${isOn ? 'bloom-active' : ''}`}>
 
       {/* DELETE CONFIRMATION OVERLAY */}
       {showDeleteConfirm && (
-        <div className="absolute inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-4 animate-in fade-in duration-200">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center text-center p-4 animate-in fade-in duration-200 remove-confirmation">
           <p className="text-amber-500 font-bold mb-1">⚠️ Removing Device</p>
-          <p className="text-slate-300 text-sm mb-4">This action cannot be undone.</p>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>This action cannot be undone.</p>
           <div className="flex gap-3 w-full">
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition"
+              className="flex-1 py-2 rounded-lg text-sm font-medium transition btn-cancel"
+              style={{
+                backgroundColor: 'var(--bg-card-inner)',
+                color: 'var(--text-primary)'
+              }}
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
-              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition"
+              className="flex-1 py-2 rounded-lg text-sm font-medium transition shadow-sm btn-remove bg-red-600 hover:bg-red-500 text-white"
             >
               Remove
             </button>
@@ -237,14 +252,14 @@ export default function DeviceCard({ device, onUpdate }) {
       )}
 
       {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-800/20 to-black/60 pointer-events-none" />
+      {/* Background Gradient included in glass-card class */}
 
       <div className="relative z-10 flex flex-col h-full justify-between min-h-[150px]">
 
         {/* HEADER */}
         <div className="flex justify-between items-start mb-4 relative">
           <div>
-            <h3 className="text-lg font-bold text-white mb-1 leading-tight pr-4">
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1 leading-tight pr-4">
               {device.name}
             </h3>
             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -256,7 +271,7 @@ export default function DeviceCard({ device, onUpdate }) {
 
           <div className="flex items-center gap-2">
             {/* Status Dot */}
-            <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isOn ? 'bg-amber-500 shadow-amber-500/50' : 'bg-slate-700'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isOn ? 'bg-[var(--accent-blue)] shadow-[0_0_8px_rgba(79,124,255,0.6)]' : 'bg-[var(--text-muted)]'}`} />
 
             {/* Admin Menu (3 dots) */}
             {user?.role === 'admin' && (
@@ -300,8 +315,8 @@ export default function DeviceCard({ device, onUpdate }) {
               <button
                 onClick={toggle}
                 className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-95 ${isOn
-                  ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-orange-500/20'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
+                  ? 'bg-[var(--accent-blue)] text-white shadow-[0_0_15px_rgba(79,124,255,0.4)]'
+                  : 'bg-[var(--bg-card-inner)] text-[var(--text-muted)] border border-[var(--border-subtle)] hover:border-[var(--text-primary)] hover:text-white'
                   }`}
                 title={isOn ? 'Turn Off' : 'Turn On'}
               >
@@ -318,9 +333,9 @@ export default function DeviceCard({ device, onUpdate }) {
         </div>
 
         {/* FOOTER: Last Toggled */}
-        <div className="mt-4 pt-4 border-t border-slate-800/50">
-          <p className="text-[10px] text-slate-600">
-            Last toggled by <span className="font-medium text-slate-500">{device.lastToggledBy?.name || '—'}</span>
+        <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
+          <p className="text-[10px] text-[var(--text-muted)]">
+            Last toggled by <span className="font-medium text-[var(--text-secondary)]">{device.lastToggledBy?.name || '—'}</span>
           </p>
         </div>
 

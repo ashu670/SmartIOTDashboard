@@ -2,19 +2,208 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* --- MASTER DARK NIGHT THEME VARIABLES --- */
+:root[data-theme="dark"] {
+  --bg-base: #05070d;
+  color-scheme: dark;
+  --bg-panel: rgba(11, 16, 32, 0.6);
+  /* More transparent for depth */
+  --bg-card: rgba(19, 30, 58, 0.2);
+  /* Barely visible base */
+  --bg-card-hover: rgba(19, 30, 58, 0.3);
+  --bg-card-inner: #131e3a;
+
+  --text-primary: #e6eaff;
+  --text-secondary: #9aa4c7;
+  --text-muted: #6b7394;
+
+  --accent-blue: #4f7cff;
+  --accent-glow: 0 0 40px rgba(79, 124, 255, 0.15);
+  /* Softer, wider */
+  --border-subtle: rgba(255, 255, 255, 0.03);
+  /* Almost invisible borders */
+  --border-btn-photo: #3665f1;
+
+  /* Gradients */
+  /* Global atmosphere: visible only in empty areas */
+  --grad-glow: radial-gradient(circle at 60% -10%, rgba(79, 124, 255, 0.08), transparent 60%);
+
+  /* Component Specifics (moved from hardcoded classes) */
+  --card-bg: linear-gradient(170deg, rgba(19, 30, 58, 0.4) 0%, rgba(5, 7, 13, 0.6) 100%);
+  --card-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  --panel-backdrop: blur(40px);
+  --card-backdrop: blur(16px);
+
+  /* Button Shadow (Dark) */
+  --shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --card-radius: 16px;
+  /* standard */
+  --card-padding: 20px;
+
+  /* Room Item defaults (dark) */
+  --room-bg: linear-gradient(180deg, #0f1730, #0b1020);
+  --room-text: var(--text-secondary);
+  --room-bg-hover: linear-gradient(180deg, #141f3f, #0f1730);
+  --room-text-hover: var(--text-primary);
+  --room-bg-active: linear-gradient(180deg, #5a56e8, #4f46e5);
+  --room-text-active: #ffffff;
+  --room-bg-active: linear-gradient(180deg, #5a56e8, #4f46e5);
+  --room-text-active: #ffffff;
+  --room-border-active: 1px solid rgba(255, 255, 255, 0.08);
+
+  /* Active State Gradient (Dark) */
+  --grad-active: linear-gradient(170deg, rgba(79, 124, 255, 0.08) 0%, rgba(5, 7, 13, 0.6) 100%);
 }
 
-/* Scrollbar Customization */
-/* Chrome, Edge, Safari */
+/* --- LIGHT DAY THEME VARIABLES --- */
+:root[data-theme="light"] {
+  --bg-base: #f4f6fb;
+  color-scheme: light;
+  --bg-main: #f4f6fb;
+  --bg-panel: #f7f9fd;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f4fa;
+  --bg-card-inner: #f1f4fa;
+
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  --border-subtle: #e5eaf2;
+  --border-btn-photo: #000000;
+
+  --accent-blue: #4f7cff;
+  --accent-blue-soft: rgba(79, 124, 255, 0.15);
+  --accent-glow: none;
+
+  /* Soft daylight elevation */
+  --shadow-soft:
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 4px 10px rgba(15, 23, 42, 0.05);
+
+  --shadow-btn: 0 6px 16px rgba(79, 124, 255, 0.25);
+
+  --grad-glow: none;
+
+  /* Component Overrides */
+  --card-bg: #ffffff;
+  --card-shadow: var(--shadow-soft);
+  --panel-backdrop: none;
+  --card-backdrop: none;
+
+  /* Room Item Overrides */
+  --room-bg: transparent;
+  --room-text: var(--text-secondary);
+  --room-bg-hover: rgba(0, 0, 0, 0.03);
+  --room-text-hover: var(--text-primary);
+  --room-bg-active: rgba(79, 124, 255, 0.15);
+  --room-text-active: #4f7cff;
+  --room-border-active: none;
+
+  /* Active State Gradient (Light) - Clean, no metallic grey */
+  --grad-active: linear-gradient(170deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+  background-color: var(--bg-base);
+  background-image: var(--grad-glow);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- GLASS & PANEL UTILITIES --- */
+
+.glass-panel {
+  background: var(--bg-panel);
+  /* Heavy blurred backdrop for "frosted" depth */
+  backdrop-filter: var(--panel-backdrop);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: var(--card-backdrop);
+  border: 1px solid var(--border-subtle);
+  /* Deep soft shadow for separation, not glow */
+  box-shadow: var(--card-shadow);
+}
+
+/* --- ATMOSPHERIC BLOOM (No Edge Glows) --- */
+
+/* Interactive Bloom Container */
+.bloom-interact {
+  position: relative;
+  transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+  overflow: hidden;
+}
+
+/* The Light Source (Pseudo-element) */
+.bloom-interact::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  /* Large, diffuse, very low opacity */
+  background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(79, 124, 255, 0.06),
+      transparent 50%);
+  opacity: 0;
+  transition: opacity 0.8s ease-out;
+  /* Slow fade in/out for realism */
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bloom-interact:hover::before {
+  opacity: 1;
+}
+
+/* Hover state: NO border glow, just slight lift/light */
+.glass-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.08);
+  /* slight highlight */
+}
+
+/* Device Card Specifics */
+.device-card {
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+}
+
+/* List Row (Most Used / Ambience) */
+.list-row {
+  background: var(--bg-card-inner);
+  border-radius: 14px;
+  padding: 10px;
+  /* Ensure padding match */
+}
+
+[data-theme="dark"] .list-row {
+  background: rgba(15, 23, 42, 0.5);
+  /* bg-slate-900/50 equivalent */
+}
+
+/* Constant Active State (e.g., Device ON) */
+.bloom-active {
+  /* Internal ambient light, not outer glow */
+  background: var(--grad-active);
+  border-color: rgba(79, 124, 255, 0.15);
+  /* Very subtle blue hint on border */
+}
+
+/* --- SCROLLBARS --- */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -22,26 +211,229 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4); /* slate-500 */
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
-}
-
-
-/* Utility to hide scrollbar but keep functionality */
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
+
 .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* --- ROOM LIST ITEM (Polished, Ultra-Compact) --- */
+.room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--room-bg);
+  color: var(--room-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-height: 34px;
+  font-size: 13px;
+  line-height: 1.2;
+  margin-bottom: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.room-item:not(.active):hover {
+  background: var(--room-bg-hover);
+  color: var(--room-text-hover);
+}
+
+.room-item.active {
+  background: var(--room-bg-active);
+  color: var(--room-text-active);
+  padding: 8px 12px;
+  min-height: 34px;
+  box-shadow: none;
+  /* Removed hard shadow */
+  border: var(--room-border-active);
+}
+
+/* Delete Icon */
+.room-delete {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+
+.room-item:hover .room-delete {
+  opacity: 1;
+}
+
+/* --- AMBIENCE CARD (Calm, Utility, No Hero Gradient) --- */
+.ambience-card {
+  background: var(--card-bg);
+  /* Standard Card Family */
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-subtle);
+}
+
+.ambience-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* Background handled by .list-row or variable */
+  background: var(--bg-card-inner);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ambience-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg-card-hover);
+  display: grid;
+  place-items: center;
+  color: var(--accent-blue);
+}
+
+.ambience-title {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ambience-subtitle {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* --- REMOVE DEVICE OVERLAY --- */
+.remove-confirmation {
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Dark Theme: Glass Overlay */
+[data-theme="dark"] .remove-confirmation {
+  background: rgba(15, 20, 35, 0.7);
+  /* 55% opacity */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  /* border-radius: 18px; -- Inherited from parent usually, but setting explicitly if context allows */
+  border: 1px solid rgba(79, 124, 255, 0.25);
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .remove-confirmation:hover {
+  background: rgba(15, 20, 35, 0.9);
+}
+
+/* Light Theme: Solid Card Overlay */
+[data-theme="light"] .remove-confirmation {
+  background: var(--bg-card);
+  /* clean solid background */
+}
+
+/* Overlay Buttons */
+[data-theme="dark"] .btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .btn-remove {
+  background: #dc2626;
+  color: white;
+}
+
+/* --- ROOM INPUT (Internal Tick Design) --- */
+.room-input-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.room-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 44px 0 12px;
+  /* space for tick on right */
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card-inner);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.room-input::placeholder {
+  color: var(--text-muted);
+}
+
+.room-input-check {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.room-input-check:hover {
+  background: var(--accent-blue-hover);
+}
+
+/* --- AMBIENCE --- */
+.ambience-play {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4f7cff;
+  /* Accent Blue */
+  color: white;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(79, 124, 255, 0.35);
+  transition: transform 0.2s;
+}
+
+.ambience-play:hover {
+  transform: scale(1.05);
+}
+
+/* --- FORM ELEMENTS GLOBAL STYLES --- */
+select {
+  background-color: var(--bg-card-inner);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+html[data-theme="dark"] select option {
+  background-color: #0b1020;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] select option:checked,
+html[data-theme="dark"] select option:hover {
+  background-color: #1e66d0;
+  color: #ffffff;
 }

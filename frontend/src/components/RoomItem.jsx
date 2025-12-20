@@ -51,13 +51,7 @@ const RoomItem = ({ room, isSelected, onClick, isAdmin, onDeleteRoom }) => {
         <div className="w-full sm:w-auto">
             <div
                 onClick={onClick}
-                className={`
-          group relative w-full px-3 py-2 rounded-xl text-sm transition-all duration-200 flex items-center justify-between cursor-pointer select-none
-          ${isSelected
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 ring-1 ring-indigo-500'
-                        : 'bg-slate-700/50 hover:bg-slate-700 text-slate-200'
-                    }
-        `}
+                className={`room-item ${isSelected ? 'active' : ''}`}
             >
                 <span className="truncate mr-2 font-medium">{room.name}</span>
 
@@ -65,11 +59,7 @@ const RoomItem = ({ room, isSelected, onClick, isAdmin, onDeleteRoom }) => {
                 {isAdmin && (
                     <button
                         onClick={handleDeleteClick}
-                        className={`
-               w-6 h-6 rounded flex items-center justify-center transition-all duration-200
-               text-slate-400 hover:text-red-400 hover:bg-red-500/10
-               ${isSelected ? 'opacity-70 hover:opacity-100 text-indigo-200 hover:text-white hover:bg-indigo-500' : 'opacity-0 group-hover:opacity-100'}
-            `}
+                        className="room-delete w-6 h-6 rounded flex items-center justify-center transition-all duration-200 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
                         title="Remove Room"
                     >
                         {/* Simple Trash Outline Icon */}

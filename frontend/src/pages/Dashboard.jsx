@@ -32,7 +32,15 @@ export default function Dashboard() {
   const [logTab, setLogTab] = useState('activity'); // 'activity' | 'security'
   const scrollContainerRef = useRef(null);
 
-  /* -------------------- HORIZONTAL SCROLL UX -------------------- */
+
+
+  /* -------------------- THEME SYSTEM -------------------- */
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('theme', currentTheme);
+  }, [currentTheme]);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
@@ -390,13 +398,14 @@ export default function Dashboard() {
 
   /* -------------------- UI -------------------- */
   return (
-    <div className="h-screen bg-slate-950 text-white flex overflow-hidden">
+    <div className="h-screen bg-[var(--bg-main)] text-[var(--text-primary)] flex overflow-hidden font-sans definition-checked">
       {/* ========== LEFT SIDEBAR ========== */}
-      <aside className="w-64 shrink-0 flex flex-col gap-4 p-4 border-r border-slate-800 bg-slate-900/60 overflow-y-auto">
+      {/* ========== LEFT SIDEBAR ========== */}
+      <aside className="w-64 shrink-0 flex flex-col gap-4 p-4 glass-panel overflow-y-auto z-20">
         {/* --- Profile Section --- */}
         <div
           onClick={() => navigate('/profile')}
-          className="bg-slate-800/50 rounded-2xl p-3 flex items-center gap-3 mb-6 cursor-pointer"
+          className="glass-card rounded-2xl p-3 flex items-center gap-3 mb-6 cursor-pointer hover:bg-[var(--bg-card-hover)] transition"
         >
           {user.photo ? (
             <img
@@ -418,14 +427,16 @@ export default function Dashboard() {
         </div>
 
         {/* --- Rooms List --- */}
-        <div className="bg-slate-800/50 rounded-2xl p-3 flex flex-col" style={{ maxHeight: '300px' }}>
+        {/* --- Rooms List --- */}
+        {/* --- Rooms List --- */}
+        <div className="glass-card rounded-2xl p-2 flex flex-col" style={{ maxHeight: '300px' }}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-slate-400 uppercase tracking-wide">Rooms</p>
           </div>
 
           {/* Inline Add Room UI */}
           {isAddingRoom && (
-            <div className="mb-2 p-2 bg-slate-900/50 rounded-lg flex items-center gap-2">
+            <div className="room-input-wrapper">
               <input
                 type="text"
                 placeholder="Room name"
@@ -436,21 +447,14 @@ export default function Dashboard() {
                   if (e.key === 'Escape') handleCancelAddRoom();
                 }}
                 autoFocus
-                className="flex-1 px-2 py-1 rounded border border-slate-600 bg-slate-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="room-input"
               />
               <button
                 onClick={handleConfirmAddRoom}
-                className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm"
+                className="room-input-check"
                 title="Confirm"
               >
                 ✔
-              </button>
-              <button
-                onClick={handleCancelAddRoom}
-                className="px-2 py-1 rounded bg-red-600/80 hover:bg-red-500 text-white text-sm"
-                title="Cancel"
-              >
-                ✖
               </button>
             </div>
           )}
@@ -479,50 +483,51 @@ export default function Dashboard() {
           {user.role === 'admin' && !isAddingRoom && (
             <button
               onClick={handleAddRoomClick}
-              className="mt-4 mx-auto w-[100%] p-2 rounded-xl border-2 border-dashed border-slate-600 hover:border-indigo-500 bg-slate-900/30 hover:bg-slate-900/50 transition flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-indigo-400"
+              className="mt-2 mx-auto w-[100%] p-1.5 rounded-lg border border-dashed border-[var(--border-subtle)] hover:border-[var(--accent-blue)] bg-transparent hover:bg-[var(--bg-card-inner)] transition flex flex-col items-center justify-center gap-0.5 text-[var(--text-muted)] hover:text-[var(--accent-blue)]"
             >
-              <span className="text-base">+</span>
-              <span className="text-[12px]">Add New Room</span>
+              <span className="text-sm">+</span>
+              <span className="text-[10px]">Add New Room</span>
             </button>
           )}
         </div>
 
 
-        <div className="bg-slate-800/50 rounded-2xl p-3 flex flex-col" style={{ maxHeight: '250px' }}>
+        <div className="glass-card rounded-2xl p-3 flex flex-col" style={{ maxHeight: '250px' }}>
 
           {user.role === 'admin' ? (
-            <div className="flex items-center gap-4 mb-3 border-b border-slate-700/50 pb-2">
+            <div className="flex items-center gap-4 mb-3 border-b-2" style={{ borderColor: 'var(--border-subtle)' }}>
               <button
                 onClick={() => setLogTab('activity')}
-                className={`text-xs font-bold uppercase tracking-wide transition ${logTab === 'activity' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                className={`text-xs font-bold uppercase tracking-wide transition pb-2 mb-[-2px] border-b-2 ${logTab === 'activity' ? 'text-[var(--accent-blue)] border-[var(--accent-blue)]' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]'
                   }`}
               >
                 Activity Logs
               </button>
               <button
                 onClick={() => setLogTab('security')}
-                className={`text-xs font-bold uppercase tracking-wide transition ${logTab === 'security' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                className={`text-xs font-bold uppercase tracking-wide transition pb-2 mb-[-2px] border-b-2 ${logTab === 'security' ? 'text-[var(--text-accent-blue)] border-[var(--accent-blue)]' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]'
                   }`}
+                style={{ color: logTab === 'security' ? 'var(--accent-blue)' : undefined }}
               >
                 Security Logs
               </button>
             </div>
           ) : (
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Activity Logs</p>
+            <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Activity Logs</p>
           )}
 
           <div className="overflow-y-auto space-y-2 flex-1">
             {/* ACTIVITY LOGS */}
             {logTab === 'activity' && (
               activityLogs.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">No activity logs yet</p>
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">No activity logs yet</p>
               ) : (
                 activityLogs.map((log, idx) => (
-                  <div key={idx} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg">
-                    <p className="truncate">
+                  <div key={idx} className="text-xs p-2 rounded-lg mb-1" style={{ backgroundColor: 'var(--bg-card-inner)' }}>
+                    <p className="truncate" style={{ color: 'var(--text-primary)' }}>
                       <span className="font-semibold">{log.deviceLocation} {log.deviceName}</span> {log.action} by {log.userName || 'Unknown'}
                     </p>
-                    <p className="text-slate-500 text-[10px] mt-1">
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                       {new Date(log.timestamp).toLocaleString()}
                     </p>
                   </div>
@@ -533,14 +538,14 @@ export default function Dashboard() {
             {/* SECURITY LOGS */}
             {logTab === 'security' && (
               securityLogs.length === 0 ? (
-                <p className="text-xs text-slate-600 italic text-center py-4">No security events recorded yet.</p>
+                <p className="text-xs italic text-center py-4" style={{ color: 'var(--text-muted)' }}>No security events recorded yet.</p>
               ) : (
                 securityLogs.map((log) => (
-                  <div key={log._id} className="text-xs text-slate-300 p-2 bg-slate-900/50 rounded-lg border-l-2 border-indigo-500/50">
-                    <p className="">
-                      <span className="text-slate-200">{log.action}</span>
+                  <div key={log._id} className="text-xs p-2 rounded-lg mb-1 border-l-2 border-indigo-500/50" style={{ backgroundColor: 'var(--bg-card-inner)' }}>
+                    <p className="" style={{ color: 'var(--text-primary)' }}>
+                      <span>{log.action}</span>
                     </p>
-                    <p className="text-slate-500 text-[10px] mt-1 flex justify-between">
+                    <p className="text-[10px] mt-1 flex justify-between" style={{ color: 'var(--text-muted)' }}>
                       <span>{new Date(log.timestamp).toLocaleString()}</span>
                     </p>
                   </div>
@@ -568,7 +573,7 @@ export default function Dashboard() {
           {/* Global Header Row */}
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-[var(--text-primary)]">
                 Welcome back, {user.name} 👋
               </h2>
             </div>
@@ -579,7 +584,7 @@ export default function Dashboard() {
               placeholder="Search with device name"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-64"
+              className="px-4 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card-inner)] text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-blue)] w-64 shadow-[0_0_10px_rgba(0,0,0,0.2)]"
             />
           </div>
 
@@ -609,7 +614,13 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Filter by type:</span>
               <select
-                className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                className="px-3 py-2 rounded-lg border text-sm focus:outline-none transition-colors"
+                style={{
+                  backgroundColor: 'var(--bg-card-inner)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  boxShadow: 'var(--shadow-btn)'
+                }}
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
               >
@@ -625,10 +636,15 @@ export default function Dashboard() {
               <button
                 onClick={handleAddDeviceClick}
                 disabled={!selectedRoom}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${selectedRoom
-                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition text-white ${selectedRoom
+                  ? 'hover:brightness-110'
+                  : 'cursor-not-allowed opacity-50'
                   }`}
+                style={{
+                  backgroundColor: selectedRoom ? 'var(--accent-blue)' : 'var(--bg-card-inner)',
+                  boxShadow: selectedRoom ? 'var(--shadow-btn)' : 'none',
+                  color: selectedRoom ? 'white' : 'var(--text-muted)'
+                }}
                 title={selectedRoom ? 'Add new device' : 'Select a room first'}
               >
                 + Add Device
@@ -638,46 +654,64 @@ export default function Dashboard() {
 
           {/* Inline Add Device Form */}
           {isAddingDevice && (
-            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-4">
-              <form onSubmit={addDevice} className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="mb-8 p-4 rounded-2xl border transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-subtle)'
+              }}>
+              <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Add New Device</h3>
+              <form onSubmit={addDevice} className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1 pl-1" style={{ color: 'var(--text-secondary)' }}>Device Name</label>
                   <input
-                    required
-                    placeholder="Device name"
-                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    type="text"
                     value={newDevice.name}
-                    onChange={(e) =>
-                      setNewDevice({ ...newDevice, name: e.target.value })
-                    }
-                    autoFocus
+                    onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    style={{
+                      backgroundColor: 'var(--bg-card-inner)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
+                    placeholder="e.g. Living Room Lamp"
+                    required
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1 pl-1" style={{ color: 'var(--text-secondary)' }}>Type</label>
                   <select
-                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-white focus:outline-none focus:border-indigo-500"
                     value={newDevice.type}
-                    onChange={(e) =>
-                      setNewDevice({ ...newDevice, type: e.target.value })
-                    }
+                    onChange={(e) => setNewDevice({ ...newDevice, type: e.target.value })}
+                    className="px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    style={{
+                      backgroundColor: 'var(--bg-card-inner)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)'
+                    }}
                   >
-                    <option>AC/Heater</option>
-                    <option>Lights</option>
-                    <option>Fan</option>
+                    <option value="AC/Heater">AC/Heater</option>
+                    <option value="Lights">Lights</option>
+                    <option value="Fan">Fan</option>
                   </select>
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={handleCancelAddDevice}
-                    className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-medium"
-                  >
-                    Add Device
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingDevice(false)}
+                  className="px-4 py-2 rounded-xl font-medium transition-colors"
+                  style={{
+                    color: 'var(--text-secondary)',
+                    backgroundColor: 'var(--bg-card-inner)'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl font-medium text-white transition-all shadow-[0_4px_12px_rgba(79,124,255,0.3)] hover:shadow-[0_6px_16px_rgba(79,124,255,0.4)] active:scale-95"
+                  style={{ backgroundColor: 'var(--accent-blue)' }}
+                >
+                  Add Device
+                </button>
               </form>
             </div>
           )}
@@ -732,15 +766,15 @@ export default function Dashboard() {
           {/* Bottom Split Section: Most Used + Ambience */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-1">
             {/* Left: Most Used */}
-            <div className="bg-slate-800/70 rounded-2xl p-4">
-              <h3 className="text-lg font-semibold mb-3">Most Used</h3>
+            <div className="glass-card rounded-2xl p-4">
+              <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Most Used</h3>
               <div className="space-y-2">
                 {mostUsedDevices.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-4">No usage data yet</p>
                 ) : (
                   mostUsedDevices.map((device) => {
                     return (
-                      <div key={device.deviceId} className="flex items-center gap-3 p-2 bg-slate-900/50 rounded-lg">
+                      <div key={device.deviceId} className="flex items-center gap-3 p-2 list-row">
                         <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center">
                           <span className="text-xl">
                             {device.type === 'AC/Heater' ? '❄️' : device.type === 'Lights' ? '💡' : '🌀'}
@@ -762,18 +796,22 @@ export default function Dashboard() {
             </div>
 
             {/* Right: Ambience */}
-            <div className="bg-slate-800/70 rounded-2xl p-4">
-              <h3 className="text-lg font-semibold mb-3">Ambience</h3>
-              <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-xl p-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🎵</span>
+            <div className="glass-card rounded-2xl p-4">
+              <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Ambience</h3>
+              <div className="ambience-row list-row p-3 rounded-xl">
+                <div className="ambience-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Song Name</p>
-                  <p className="text-xs text-slate-400 truncate">Artist Name</p>
+                  <p className="ambience-title truncate">Lo-Fi Study Beats</p>
+                  <p className="ambience-subtitle truncate">Spotify</p>
                 </div>
-                <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">▶️</span>
+                <button className="ambience-play">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -782,14 +820,14 @@ export default function Dashboard() {
       </main>
 
       {/* ========== RIGHT PANEL — INFO / AUTOMATION / FAMILY ========== */}
-      <aside className="w-80 shrink-0 border-l border-slate-800 bg-slate-900/60 flex flex-col">
+      <aside className="w-80 shrink-0 glass-panel flex flex-col z-20 border-l-0">
         {/* Tabs */}
-        <div className="flex border-b border-slate-800">
+        <div className="flex border-b border-[var(--border-subtle)]">
           <button
             onClick={() => setActiveTab('info')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'info'
-              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
-              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              ? 'bg-[var(--bg-card-inner)] text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] shadow-[inset_0_-20px_20px_-20px_rgba(79,124,255,0.1)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-inner)]/50'
               }`}
           >
             Info
@@ -797,8 +835,8 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab('theme')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'theme'
-              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
-              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              ? 'bg-[var(--bg-card-inner)] text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] shadow-[inset_0_-20px_20px_-20px_rgba(79,124,255,0.1)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-inner)]/50'
               }`}
           >
             Theme
@@ -806,8 +844,8 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab('family')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'family'
-              ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-400'
-              : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+              ? 'bg-[var(--bg-card-inner)] text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] shadow-[inset_0_-20px_20px_-20px_rgba(79,124,255,0.1)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-inner)]/50'
               }`}
           >
             Family
@@ -819,15 +857,16 @@ export default function Dashboard() {
           {activeTab === 'info' && (
             <div className="space-y-4">
               {/* Indoor Temperature */}
-              <div className="bg-slate-800/70 rounded-2xl p-6">
-                <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Indoor Temperature</p>
-                <p className="text-5xl font-bold">24°C</p>
-                <p className="text-sm text-slate-400 mt-2">{formattedDate}</p>
+              {/* Indoor Temperature */}
+              <div className="glass-card rounded-2xl p-6">
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-2">Indoor Temperature</p>
+                <p className="text-5xl font-bold text-[var(--text-primary)]">24°C</p>
+                <p className="text-sm text-[var(--text-secondary)] mt-2">{formattedDate}</p>
               </div>
 
               {/* Mood Setup */}
-              <div className="bg-slate-800/70 rounded-2xl p-4">
-                <p className="text-sm font-semibold mb-3">Mood Setup</p>
+              <div className="glass-card rounded-2xl p-4">
+                <p className="text-sm font-semibold mb-3 text-[var(--text-primary)]">Mood Setup</p>
                 <div className="grid grid-cols-2 gap-2">
                   {['Calm', 'Good Night', 'Chill', 'Relax'].map((mood) => (
                     <button
@@ -835,8 +874,8 @@ export default function Dashboard() {
                       onClick={() => handleApplyMood(mood)}
                       disabled={!selectedRoom}
                       className={`px-4 py-2 rounded-lg border text-sm transition ${selectedRoom
-                        ? 'bg-slate-900/50 hover:bg-indigo-600/20 border-slate-700 hover:border-indigo-500 cursor-pointer'
-                        : 'bg-slate-800/50 border-slate-700 text-slate-500 cursor-not-allowed'
+                        ? 'bg-[var(--bg-card-inner)] hover:bg-[rgba(79,124,255,0.1)] border-[var(--border-subtle)] hover:border-[var(--accent-blue)] cursor-pointer text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-card-inner)] opacity-50 border-[var(--border-subtle)] text-[var(--text-muted)] cursor-not-allowed'
                         }`}
                       title={selectedRoom ? `Apply ${mood} mood` : 'Select a room first'}
                     >
@@ -847,17 +886,17 @@ export default function Dashboard() {
               </div>
 
               {/* Electricity Consumption */}
-              <div className="bg-slate-800/70 rounded-2xl p-4">
+              <div className="glass-card rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold">Electricity Consumption</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Electricity Consumption</p>
                   <div className="flex gap-1">
                     {['24h', '7d', '30d'].map((period) => (
                       <button
                         key={period}
                         onClick={() => setEnergyRange(period)}
                         className={`px-2 py-1 text-xs rounded transition ${energyRange === period
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                          : 'bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900'
+                          ? 'bg-[var(--accent-blue)] text-white shadow-[var(--accent-glow)]'
+                          : 'bg-[var(--bg-card-inner)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
                           }`}
                       >
                         {period}
@@ -874,8 +913,56 @@ export default function Dashboard() {
 
           {activeTab === 'theme' && (
             <div className="space-y-4">
-              <div className="bg-slate-800/70 rounded-2xl p-6 text-center">
-                <p className="text-slate-400">Theme customization coming soon</p>
+              <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
+                Appearance
+              </h3>
+
+              <div className="flex flex-col gap-3">
+                {/* Dark Theme Option */}
+                <button
+                  onClick={() => setCurrentTheme('dark')}
+                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${currentTheme === 'dark'
+                    ? 'bg-[var(--bg-card)] border-[var(--accent-blue)]'
+                    : 'bg-transparent border-[var(--border-subtle)] hover:border-[var(--text-secondary)] opacity-70 hover:opacity-100'
+                    }`}
+                >
+                  <div className="w-full h-20 rounded-lg mb-3 relative overflow-hidden bg-[#05070d] border border-white/5">
+                    <div className="absolute top-2 left-2 w-16 h-full bg-[#0b1020] rounded-tl-md" />
+                    <div className="absolute top-4 right-2 w-8 h-8 rounded-full bg-[#4f7cff] opacity-20 blur-md" />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">
+                      Dark Night
+                    </span>
+                    {currentTheme === 'dark' && (
+                      <div className="w-2 h-2 rounded-full bg-[var(--accent-blue)] shadow-[0_0_5px_#4f7cff]" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Light Day Theme (New) */}
+                <button
+                  onClick={() => setCurrentTheme('light')}
+                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${currentTheme === 'light'
+                    ? 'bg-[var(--bg-card)] border-[var(--accent-blue)]'
+                    : 'bg-transparent border-[var(--border-subtle)] hover:border-[var(--text-secondary)] opacity-70 hover:opacity-100'
+                    }`}
+                >
+                  <div className="w-full h-20 rounded-lg mb-3 relative overflow-hidden bg-[#f4f6fb] border border-slate-200">
+                    <div className="absolute top-2 left-2 w-16 h-full bg-[#ffffff] rounded-tl-md shadow-sm border border-slate-100" />
+                    <div className="absolute top-4 right-2 w-8 h-8 rounded-full bg-[#4f7cff] opacity-10" />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">
+                      Light Day
+                    </span>
+                    {currentTheme === 'light' && (
+                      <div className="w-2 h-2 rounded-full bg-[var(--accent-blue)] shadow-[0_0_5px_rgba(79,124,255,0.4)]" />
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
           )}
@@ -883,34 +970,45 @@ export default function Dashboard() {
           {activeTab === 'family' && (
             <div className="space-y-3">
               {familyMembers.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">No family members found</p>
+                <p className="text-sm text-slate-500 text-center py-8">
+                  No family members found
+                </p>
               ) : (
                 <>
                   {familyMembers.map((member) => (
-                    <div key={member._id || member.email} className="bg-slate-800/70 rounded-xl p-3 flex items-center gap-3">
+                    <div
+                      key={member._id || member.email}
+                      className="rounded-xl p-3 flex items-center gap-3 glass-card"
+                    >
                       {member.photo ? (
                         <img
                           src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${member.photo}`}
                           alt={member.name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-slate-700"
+                          className="w-12 h-12 rounded-full object-cover border-2"
+                          style={{ borderColor: 'var(--border-subtle)' }}
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-lg font-semibold">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold"
+                          style={{ backgroundColor: 'var(--bg-card-inner)', color: 'var(--text-primary)' }}>
                           {member.name.charAt(0).toUpperCase()}
                         </div>
                       )}
+
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{member.name}</p>
+                        <p className="text-sm font-semibold truncate">
+                          {member.name}
+                        </p>
                         <p className="text-xs text-slate-400">
                           {member.role === 'admin' ? 'Family Head' : 'Family Member'}
                         </p>
                       </div>
                     </div>
                   ))}
+
                   {user.role === 'admin' && (
                     <button
                       onClick={() => navigate('/manage-members')}
-                      className="w-full mt-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white transition text-center"
+                      className="w-full mt-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white transition"
                     >
                       Manage Members
                     </button>
@@ -921,6 +1019,6 @@ export default function Dashboard() {
           )}
         </div>
       </aside>
-    </div >
+    </div>
   );
 }
