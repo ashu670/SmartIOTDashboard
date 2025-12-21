@@ -527,7 +527,7 @@ export default function Dashboard() {
               ) : (
                 activityLogs.map((log, idx) => (
                   <div key={idx} className="text-xs p-2 rounded-lg mb-1" style={{ backgroundColor: 'var(--bg-card-inner)' }}>
-                    <p className="truncate" style={{ color: 'var(--text-primary)' }}>
+                    <p className="break-words" style={{ color: 'var(--text-primary)' }}>
                       <span className="font-semibold">{log.deviceLocation} {log.deviceName}</span> {log.action} by {log.userName || 'Unknown'}
                     </p>
                     <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
