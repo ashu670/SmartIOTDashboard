@@ -150,12 +150,16 @@ export default function Dashboard() {
 
     s.on('deviceRemoved', ({ deviceId }) => {
       setDevices((prev) => prev.filter((d) => d._id !== deviceId));
+      fetchMostUsed();
     });
 
     s.on('roomRemoved', ({ roomId }) => {
       setRooms((prev) => prev.filter(r => r._id !== roomId));
       // If selected room was deleted, reset selection
       setSelectedRoom((prev) => (prev && prev._id === roomId ? null : prev));
+      // Refetch devices and most used since cascading delete happened
+      fetchDevices();
+      fetchMostUsed();
     });
 
     s.on('roomMoodApplied', ({ devices: updatedDevices }) => {

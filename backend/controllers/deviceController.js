@@ -427,9 +427,7 @@ exports.getMostUsedDevices = async (req, res) => {
           lastUsed: { $max: '$timestamp' }
         }
       },
-      { $sort: { count: -1, lastUsed: -1 } },
-      { $limit: limit },
-      // Lookup device details
+      // Lookup device details BEFORE limiting to ensure we only get existing devices
       {
         $lookup: {
           from: 'devices',
@@ -438,7 +436,9 @@ exports.getMostUsedDevices = async (req, res) => {
           as: 'device'
         }
       },
-      { $unwind: '$device' },
+      { $unwind: '$device' }, // Implicitly filters out devices that don't exist
+      { $sort: { count: -1, lastUsed: -1 } },
+      { $limit: limit },
       // Project final shape
       {
         $project: {
