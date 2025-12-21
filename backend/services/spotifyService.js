@@ -156,3 +156,33 @@ exports.togglePlay = async (userId, action) => {
         return false;
     }
 };
+
+exports.nextTrack = async (userId) => {
+    const token = await getValidToken(userId);
+    if (!token) return false;
+
+    try {
+        await axios.post('https://api.spotify.com/v1/me/player/next', {}, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return true;
+    } catch (error) {
+        console.error('Spotify Next Track Error:', error.response?.data || error.message);
+        return false;
+    }
+};
+
+exports.previousTrack = async (userId) => {
+    const token = await getValidToken(userId);
+    if (!token) return false;
+
+    try {
+        await axios.post('https://api.spotify.com/v1/me/player/previous', {}, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return true;
+    } catch (error) {
+        console.error('Spotify Previous Track Error:', error.response?.data || error.message);
+        return false;
+    }
+};

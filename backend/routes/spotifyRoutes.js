@@ -92,4 +92,22 @@ router.post('/toggle-play', protect, async (req, res) => {
     }
 });
 
+router.post('/next', protect, async (req, res) => {
+    try {
+        const success = await spotifyService.nextTrack(req.user._id);
+        res.json({ success });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/previous', protect, async (req, res) => {
+    try {
+        const success = await spotifyService.previousTrack(req.user._id);
+        res.json({ success });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;

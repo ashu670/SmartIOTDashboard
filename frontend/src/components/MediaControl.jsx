@@ -56,6 +56,26 @@ export default function MediaControl({ user }) {
         }
     };
 
+    const handleNext = async () => {
+        if (!spotifyState.isConnected) return;
+        try {
+            await api.post('/spotify/next');
+            // We can't easily optimistic update since we don't know the next song
+            // But the interval will catch it shortly
+        } catch (err) {
+            console.error('Next track failed', err);
+        }
+    };
+
+    const handlePrevious = async () => {
+        if (!spotifyState.isConnected) return;
+        try {
+            await api.post('/spotify/previous');
+        } catch (err) {
+            console.error('Previous track failed', err);
+        }
+    };
+
     // State 1: Not Connected
     if (!spotifyState.isConnected) {
         return (
@@ -165,6 +185,7 @@ export default function MediaControl({ user }) {
                                 <button
                                     className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition disabled:opacity-30"
                                     disabled={!track}
+                                    onClick={handlePrevious}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
@@ -191,6 +212,7 @@ export default function MediaControl({ user }) {
                                 <button
                                     className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition disabled:opacity-30"
                                     disabled={!track}
+                                    onClick={handleNext}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
