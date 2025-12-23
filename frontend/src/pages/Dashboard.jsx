@@ -9,7 +9,7 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user, loading, logout } = useContext(AuthContext);
+  const { user, loading, logout, theme, setTheme } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [devices, setDevices] = useState([]);
@@ -33,13 +33,7 @@ export default function Dashboard() {
   const [logTab, setLogTab] = useState('activity'); // 'activity' | 'security'
   const scrollContainerRef = useRef(null);
 
-  /* -------------------- THEME SYSTEM -------------------- */
-  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('theme', currentTheme);
-  }, [currentTheme]);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
@@ -905,8 +899,8 @@ export default function Dashboard() {
               <div className="flex flex-col gap-3">
                 {/* Dark Theme Option */}
                 <button
-                  onClick={() => setCurrentTheme('dark')}
-                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${currentTheme === 'dark'
+                  onClick={() => setTheme('dark')}
+                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${theme === 'dark'
                     ? 'bg-[var(--bg-card)] border-[var(--accent-blue)]'
                     : 'bg-transparent border-[var(--border-subtle)] hover:border-[var(--text-secondary)] opacity-70 hover:opacity-100'
                     }`}
@@ -920,7 +914,7 @@ export default function Dashboard() {
                     <span className="text-sm font-medium text-[var(--text-primary)]">
                       Dark Night
                     </span>
-                    {currentTheme === 'dark' && (
+                    {theme === 'dark' && (
                       <div className="w-2 h-2 rounded-full bg-[var(--accent-blue)] shadow-[0_0_5px_#4f7cff]" />
                     )}
                   </div>
@@ -928,8 +922,8 @@ export default function Dashboard() {
 
                 {/* Light Day Theme (New) */}
                 <button
-                  onClick={() => setCurrentTheme('light')}
-                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${currentTheme === 'light'
+                  onClick={() => setTheme('light')}
+                  className={`relative p-3 rounded-xl text-left border transition-all duration-200 group ${theme === 'light'
                     ? 'bg-[var(--bg-card)] border-[var(--accent-blue)]'
                     : 'bg-transparent border-[var(--border-subtle)] hover:border-[var(--text-secondary)] opacity-70 hover:opacity-100'
                     }`}
@@ -943,7 +937,7 @@ export default function Dashboard() {
                     <span className="text-sm font-medium text-[var(--text-primary)]">
                       Light Day
                     </span>
-                    {currentTheme === 'light' && (
+                    {theme === 'light' && (
                       <div className="w-2 h-2 rounded-full bg-[var(--accent-blue)] shadow-[0_0_5px_rgba(79,124,255,0.4)]" />
                     )}
                   </div>
